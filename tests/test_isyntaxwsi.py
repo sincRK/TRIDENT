@@ -25,8 +25,11 @@ class TestISyntaxWSI(unittest.TestCase):
         self.assertGreater(self.wsi.level_count, 0)
         self.assertIsInstance(self.wsi.level_downsamples, list)
         self.assertIsInstance(self.wsi.level_dimensions, list)
+<<<<<<< HEAD
         self.assertEqual(self.wsi.width, self.wsi.level_dimensions[0][0])
         self.assertEqual(self.wsi.height, self.wsi.level_dimensions[0][1])
+=======
+>>>>>>> test basic loading and integration
         self.assertGreater(self.wsi.mpp, 0)
         self.assertIn("barcode", self.wsi.properties)
         self.assertTrue(hasattr(self.wsi, "mag"))
@@ -51,8 +54,12 @@ class TestISyntaxWSI(unittest.TestCase):
 
     def test_get_thumbnail(self):
         thumb = self.wsi.get_thumbnail((64, 64))
+<<<<<<< HEAD
         self.assertEqual(thumb.size, (64, 64))
         self.assertEqual(len(thumb.getbands()), 3)
+=======
+        self.assertEqual(thumb.shape, (64, 64, 3))
+>>>>>>> test basic loading and integration
 
 
 if __name__ == "__main__":
