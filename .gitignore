@@ -1,0 +1,26 @@
+# Ignore Copilot and workspace specs/docs
+TRIDENT/trident/wsi_objects/specs/
+TRIDENT/trident/wsi_objects/specs/*
+TRIDENT/trident/wsi_objects/*.md
+TRIDENT/trident/wsi_objects/specs/*.md
+TRIDENT/docs/*.md
+TRIDENT/*.md
+!TRIDENT/README.md
+!TRIDENT/docs/README.md
+
+# Python/VSCode/OS junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.DS_Store
+.env
+.venv
+.idea/
+.vscode/
+
+# Test output
+TRIDENT/tests/test_isyntax_slide_processing/
+TRIDENT/tests/test_single_slide_processing/
