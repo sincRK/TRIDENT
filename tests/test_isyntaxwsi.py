@@ -6,7 +6,7 @@ import unittest
 
 from trident.wsi_objects.ISyntaxWSI import ISyntaxWSI
 
-PATH_TO_ISYNTAX = "/home/tobechanged/mirrored_folder/minidata/blau/blau_batch0_14oct2022_case033_sample1.isyntax"
+PATH_TO_ISYNTAX = "/data/floriansauter/05jun2023/001/f7da653f-6002-303f-8fb7-fcb939a6414b.isyntax"
 
 
 class TestISyntaxWSI(unittest.TestCase):
