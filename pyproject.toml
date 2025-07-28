@@ -30,9 +30,10 @@ timm = "0.9.16"
 einops_exts = "*"
 scipy = "*"
 segmentation-models-pytorch = "*"
+pyisyntax = "*"
 
 [tool.poetry.dev-dependencies]
-# Optional development dependencies 
+# Optional development dependencies
 
 [tool.poetry.scripts]
 run_batch_of_slides = "run_batch_of_slides:main"

@@ -2,11 +2,14 @@
 import os
 from typing import Optional, Literal, Union
 
+
 from trident.wsi_objects.OpenSlideWSI import OpenSlideWSI
 from trident.wsi_objects.ImageWSI import ImageWSI
 from trident.wsi_objects.CuCIMWSI import CuCIMWSI
+from trident.wsi_objects.ISyntaxWSI import ISyntaxWSI
 
-WSIReaderType = Literal['openslide', 'image', 'cucim']
+WSIReaderType = Literal['openslide', 'image', 'cucim', 'isyntax']
+ISYNTAX_EXTENSIONS = {'.isyntax'}
 OPENSLIDE_EXTENSIONS = {'.svs', '.tif', '.tiff', '.ndpi', '.vms', '.vmu', '.scn', '.mrxs'}
 CUCIM_EXTENSIONS = {'.svs', '.tif', '.tiff'}
 
@@ -14,7 +17,7 @@ def load_wsi(
     slide_path: str,
     reader_type: Optional[WSIReaderType] = None,
     **kwargs
-) -> Union[OpenSlideWSI, ImageWSI, CuCIMWSI]:
+) -> Union[OpenSlideWSI, ImageWSI, CuCIMWSI, ISyntaxWSI]:
     """
     Load a whole-slide image (WSI) using the appropriate backend.
 
@@ -60,11 +63,22 @@ def load_wsi(
                 f"Supported whole-slide image formats are: {', '.join(CUCIM_EXTENSIONS)}."
             )
 
+    elif reader_type == 'isyntax':
+        if ext in ISYNTAX_EXTENSIONS:
+            return ISyntaxWSI(slide_path=slide_path, **kwargs)
+        else:
+            raise ValueError(
+                f"Unsupported file format '{ext}' for ISyntax. "
+                f"Supported format is: .isyntax."
+            )
+
     elif reader_type is None:
-        if ext in OPENSLIDE_EXTENSIONS:
+        if ext in ISYNTAX_EXTENSIONS:
+            return ISyntaxWSI(slide_path=slide_path, **kwargs)
+        elif ext in OPENSLIDE_EXTENSIONS:
             return OpenSlideWSI(slide_path=slide_path, **kwargs)
         else:
             return ImageWSI(slide_path=slide_path, **kwargs)
 
     else:
-        raise ValueError(f"Unknown reader_type: {reader_type}. Choose from 'openslide', 'image', or 'cucim'.")
+        raise ValueError(f"Unknown reader_type: {reader_type}. Choose from 'openslide', 'image', 'cucim', or 'isyntax'.")
