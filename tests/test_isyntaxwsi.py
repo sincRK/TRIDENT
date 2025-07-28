@@ -6,7 +6,11 @@ import unittest
 
 from trident.wsi_objects.ISyntaxWSI import ISyntaxWSI
 
+<<<<<<< HEAD
 PATH_TO_ISYNTAX = "/data/floriansauter/05jun2023/001/f7da653f-6002-303f-8fb7-fcb939a6414b.isyntax"
+=======
+PATH_TO_ISYNTAX = "/home/tobechanged/mirrored_folder/minidata/blau/blau_batch0_14oct2022_case033_sample1.isyntax"
+>>>>>>> test basic loading and integration
 
 
 class TestISyntaxWSI(unittest.TestCase):
@@ -53,6 +57,7 @@ class TestISyntaxWSI(unittest.TestCase):
         thumb = self.wsi.get_thumbnail((64, 64))
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         self.assertEqual(thumb.size, (64, 64))
         self.assertEqual(len(thumb.getbands()), 3)
 =======
@@ -62,6 +67,9 @@ class TestISyntaxWSI(unittest.TestCase):
         self.assertEqual(thumb.size, (64, 64))
         self.assertEqual(len(thumb.getbands()), 3)
 >>>>>>> rework test to expect pil image from get_thumbnail test
+=======
+        self.assertEqual(thumb.shape, (64, 64, 3))
+>>>>>>> test basic loading and integration
 
 
 if __name__ == "__main__":
