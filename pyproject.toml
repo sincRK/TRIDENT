@@ -29,7 +29,6 @@ transformers = "*"
 timm = "0.9.16"
 einops_exts = "*"
 scipy = "*"
-segmentation-models-pytorch = "*"
 pyisyntax = "*"
 
 [tool.poetry.dev-dependencies]
