@@ -1,0 +1,25 @@
+name: trident
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - ipywidgets
+  - pytorch  # torch wird als pytorch in conda geführt
+  - transformers
+  - tqdm
+  - h5py
+  - matplotlib
+  - segmentation-models-pytorch
+  - opencv
+  - openslide-python
+  - pillow
+  - timm=0.9.16
+  - geopandas
+  - huggingface_hub
+  - scipy
+  - pip
+  - pip:
+      - einops_exts
+      - pyisyntax
+      - openslide-bin
