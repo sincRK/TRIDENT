@@ -31,7 +31,6 @@ einops_exts = "*"
 scipy = "*"
 segmentation-models-pytorch = "*"
 pyisyntax = "*"
-segmentation-models-pytorch = "*"
 
 [tool.poetry.dev-dependencies]
 # Optional development dependencies
