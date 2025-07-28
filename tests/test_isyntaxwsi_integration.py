@@ -38,7 +38,8 @@ class TestISyntaxWSIIntegration(unittest.TestCase):
                 slide = load_wsi(
                     slide_path=slide_path,
                     reader_type='isyntax',
-                    lazy_init=False
+                    lazy_init=False,
+                    max_workers=1
                 )
 
                 # Step 1: Tissue segmentation
