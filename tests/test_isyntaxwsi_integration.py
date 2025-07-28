@@ -15,14 +15,14 @@ class TestISyntaxWSIIntegration(unittest.TestCase):
     """Integration test for ISyntaxWSI: end-to-end pipeline on iSyntax files."""
 
     TEST_ISYNTAX_FILENAMES = [
-        "blau_batch0_14oct2022_case033_sample1.isyntax"
+        "f7da653f-6002-303f-8fb7-fcb939a6414b.isyntax"
     ]
     TEST_OUTPUT_DIR = "test_isyntax_slide_processing/"
-    TEST_PATCH_ENCODER = "uni_v1"
+    TEST_PATCH_ENCODER = "uni_v2"
     TEST_MAG = 20
     TEST_PATCH_SIZE = 256
     TEST_DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
-    TEST_ISYNTAX_DIR = "/home/tobechanged/mirrored_folder/minidata/blau/"
+    TEST_ISYNTAX_DIR = "/data/floriansauter/05jun2023/001/"
 
 
     @classmethod
@@ -38,7 +38,8 @@ class TestISyntaxWSIIntegration(unittest.TestCase):
                 slide = load_wsi(
                     slide_path=slide_path,
                     reader_type='isyntax',
-                    lazy_init=False
+                    lazy_init=False,
+                    max_workers=1
                 )
 
                 # Step 1: Tissue segmentation
