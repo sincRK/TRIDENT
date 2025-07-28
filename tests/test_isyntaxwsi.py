@@ -49,7 +49,8 @@ class TestISyntaxWSI(unittest.TestCase):
 
     def test_get_thumbnail(self):
         thumb = self.wsi.get_thumbnail((64, 64))
-        self.assertEqual(thumb.shape, (64, 64, 3))
+        self.assertEqual(thumb.size, (64, 64))
+        self.assertEqual(len(thumb.getbands()), 3)
 
 
 if __name__ == "__main__":
