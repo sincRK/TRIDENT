@@ -65,7 +65,13 @@ def load_wsi(
 
     elif reader_type == 'isyntax':
         if ext in ISYNTAX_EXTENSIONS:
-            return ISyntaxWSI(slide_path=slide_path, **kwargs)
+            max_workers = kwargs.get("max_workers", 1)
+            kwargs.pop("max_workers")
+            return ISyntaxWSI(
+                slide_path=slide_path,
+                max_workers=max_workers,
+                **kwargs
+            ) # isyntax SDK is not thread-safe
         else:
             raise ValueError(
                 f"Unsupported file format '{ext}' for ISyntax. "
@@ -74,7 +80,9 @@ def load_wsi(
 
     elif reader_type is None:
         if ext in ISYNTAX_EXTENSIONS:
-            return ISyntaxWSI(slide_path=slide_path, **kwargs)
+            max_workers = kwargs.get("max_workers", 1)
+            kwargs.pop("max_workers")
+            return ISyntaxWSI(slide_path=slide_path, max_workers=max_workers, **kwargs)
         elif ext in OPENSLIDE_EXTENSIONS:
             return OpenSlideWSI(slide_path=slide_path, **kwargs)
         else:
