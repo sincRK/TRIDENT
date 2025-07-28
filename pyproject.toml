@@ -28,9 +28,10 @@ geopandas = "*"
 huggingface_hub = "*"
 openslide-bin = "*"
 scipy = "*"
+pyisyntax = "*"
 
 [tool.poetry.dev-dependencies]
-# Optional development dependencies 
+# Optional development dependencies
 
 [tool.poetry.scripts]
 run_batch_of_slides = "run_batch_of_slides:main"
