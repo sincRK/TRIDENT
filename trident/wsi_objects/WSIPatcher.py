@@ -12,11 +12,11 @@ from trident.IO import read_coords_legacy
 
 class WSIPatcher:
     """ Iterator class to handle patching, patch scaling and tissue mask intersection """
-    
+
     def __init__(
-        self, 
-        wsi, 
-        patch_size: int, 
+        self,
+        wsi,
+        patch_size: int,
         src_pixel_size: float = None,
         dst_pixel_size: float = None,
         src_mag: int = None,
@@ -33,12 +33,11 @@ class WSIPatcher:
         Args:
             wsi (WSI): wsi to patch
             patch_size (int): patch width/height in pixel on the slide after rescaling
-            src_pixel_size (float, optional): pixel size in um/px of the slide before rescaling. Defaults to None. Deprecated, this argument will be removed in the next major version and will default to wsi.mpp
-            dst_pixel_size (float, optional): pixel size in um/px of the slide after rescaling. Defaults to None. 
-                If both dst_mag and dst_pixel_size are not None, dst_pixel_size will be used.
-	        src_mag (int, optional): level0 magnification of the slide before rescaling. Defaults to None. Deprecated, this argument will be removed in the next major version and will default to wsi.mag
-            dst_mag (int, optional): target magnification of the slide after rescaling. Defaults to None. If both dst_mag and dst_pixel_size are not None, dst_pixel_size will be used.
-            overlap (int, optional): Overlap between patches in pixels. Defaults to 0. 
+            src_pixel_size (float, optional): pixel size in um/px of the slide before rescaling. Defaults to None.
+            dst_pixel_size (float, optional): pixel size in um/px of the slide after rescaling. Defaults to None.
+	    src_mag (int, optional): level0 magnification of the slide before rescaling. Defaults to None.
+            dst_mag (int, optional): target magnification of the slide after rescaling. Defaults to None.
+            overlap (int, optional): Overlap between patches in pixels. Defaults to 0.
             mask (gpd.GeoDataFrame, optional): geopandas dataframe of Polygons. Defaults to None.
             coords_only (bool, optional): whenever to extract only the coordinates insteaf of coordinates + tile. Default to False.
             threshold (float, optional): minimum proportion of the patch under tissue to be kept.
@@ -56,7 +55,7 @@ class WSIPatcher:
         self.pil = pil
         self.dst_mag = dst_mag
 
-        # set src magnification and pixel size. 
+        # set src magnification and pixel size.
         if src_pixel_size is not None:
             self.src_pixel_size = src_pixel_size
         elif src_mag is not None:
@@ -74,15 +73,15 @@ class WSIPatcher:
         self.downsample = self.dst_pixel_size / self.src_pixel_size
         self.patch_size_src = round(patch_size * self.downsample)
         self.overlap_src = round(overlap * self.downsample)
-        
-        self.level, self.patch_size_level, self.overlap_level = self._prepare()  
-        
-        if custom_coords is None: 
+
+        self.level, self.patch_size_level, self.overlap_level = self._prepare()
+
+        if custom_coords is None:
             self.cols, self.rows = self._compute_cols_rows()
-            
+
             col_rows = np.array([
-                [col, row] 
-                for col in range(self.cols) 
+                [col, row]
+                for col in range(self.cols)
                 for row in range(self.rows)
             ])
             coords = np.array([self._colrow_to_xy(xy[0], xy[1]) for xy in col_rows])
@@ -94,115 +93,30 @@ class WSIPatcher:
             self.valid_patches_nb, self.valid_coords = self._compute_masked(coords, threshold)
         else:
             self.valid_patches_nb, self.valid_coords = len(coords), coords
-            
-    @classmethod
-    def from_legacy_coords(
-        cls, 
-        wsi, 
-        patch_size, 
-        patch_level, 
-        custom_downsample, 
-        coords, 
-        coords_only=False,
-        pil=False
-    ) -> WSIPatcher:
-        """
-        The `from_legacy_coords` function creates a WSIPatcher from legacy coordinates parameters generated 
-        with CLAM or Fishing-Rod. These legacy coordinates parameters include: 
-        `custom_downsample` and `patch_level` instead of the new `patch_size` and `dst_mag`/`dst_mpp` format
-
-        Parameters:
-        -----------
-        wsi : WSI
-            WSI to patch
-        patch_size : int
-            The target patch size at the desired magnification.
-        patch_level : int
-            The patch level used when reading the slide.
-        custom_downsample : int
-            Any additional downsampling applied to the patches.
-        coords : np.array
-            An array of patch coordinates.
-            
-
-        Returns:
-        --------
-        WSIPatcher
-            WSIPatcher created from the given legacy coordinates
-        """
-        src_mpp, dst_mpp, src_mag, dst_mag = None, None, None, None
-        downsample_ratio = (wsi.level_downsamples[patch_level] * custom_downsample)
-        if wsi.mpp is not None:
-            src_mpp = wsi.mpp
-            dst_mpp = wsi.mpp * downsample_ratio
-        else:
-            src_mag = wsi.mag
-            dst_mag = int(wsi.mag / downsample_ratio)
-
-        return WSIPatcher(
-            wsi,
-            patch_size=patch_size,
-            src_mag=src_mag,
-            dst_mag=dst_mag,
-            src_pixel_size=src_mpp,
-            dst_pixel_size=dst_mpp,
-            custom_coords=coords,
-            coords_only=coords_only,
-            pil=pil
-        )
-
-    @classmethod
-    def from_legacy_coords_file(cls, wsi, coords_path, coords_only=False, pil=False) -> WSIPatcher:
-        """
-        The `from_legacy_coords_file` function creates a WSIPatcher from a legacy coordinates file generated 
-        with CLAM or Fishing-Rod.
-
-        Parameters:
-        -----------
-        wsi : WSI
-            WSI to patch
-        coords_path : str
-            Path to legacy coordinates stored as .h5
-        coords_only : bool
-            Whenever the legacy coordinates file only contain coordinates or if it also contains images
-        pil : bool
-            pil argument passed to the WSIPatcher constructor
-            
-
-        Returns:
-        --------
-        WSIPatcher
-            WSIPatcher created from the given legacy coordinates
-        """
-        patch_size, patch_level, custom_downsample, coords = read_coords_legacy(coords_path)
-
-        return cls.from_legacy_coords(
-            wsi, patch_size, patch_level, custom_downsample, coords, coords_only=coords_only, pil=pil)
-    
 
     def _colrow_to_xy(self, col, row):
         """ Convert col row of a tile to its top-left coordinates before rescaling (x, y) """
         x = col * (self.patch_size_src) - self.overlap_src * np.clip(col - 1, 0, None)
         y = row * (self.patch_size_src) - self.overlap_src * np.clip(row - 1, 0, None)
-        return (x, y)   
-            
+        return (x, y)
+
     def _xy_to_colrow(self, x, y):
         """Convert x, y coordinates to col, row indices."""
         if x == 0:
             col = 0
         else:
             col = ((x - self.patch_size_src) // (self.patch_size_src - self.overlap_src)) + 1
-        
+
         if y == 0:
             row = 0
         else:
             row = ((y - self.patch_size_src) // (self.patch_size_src - self.overlap_src)) + 1
-        
+
         return col, row
 
     def _compute_masked(self, coords, threshold, simplify_shape=True) -> None:
         """ Compute tiles which overlap with > threshold with the tissue """
-        
+
 		# Filter coordinates by bounding boxes of mask polygons
         if simplify_shape:
             mask = self.mask.simplify(tolerance=self.patch_size_target / 4, preserve_topology=True)
@@ -212,7 +126,7 @@ class WSIPatcher:
         bbox_masks = []
         for _, bbox in bounding_boxes.iterrows():
             bbox_mask = (
-                (coords[:, 0] >= bbox['minx'] - self.patch_size_src) & (coords[:, 0] <= bbox['maxx'] + self.patch_size_src) & 
+                (coords[:, 0] >= bbox['minx'] - self.patch_size_src) & (coords[:, 0] <= bbox['maxx'] + self.patch_size_src) &
                 (coords[:, 1] >= bbox['miny'] - self.patch_size_src) & (coords[:, 1] <= bbox['maxy'] + self.patch_size_src)
             )
             bbox_masks.append(bbox_mask)
@@ -221,16 +135,16 @@ class WSIPatcher:
             bbox_mask = np.vstack(bbox_masks).any(axis=0)
         else:
             bbox_mask = np.zeros(len(coords), dtype=bool)
-            
-        
+
+
         union_mask = mask.union_all()
 
         squares = [
             Polygon([
-                (xy[0], xy[1]), 
-                (xy[0] + self.patch_size_src, xy[1]), 
-                (xy[0] + self.patch_size_src, xy[1] + self.patch_size_src), 
-                (xy[0], xy[1] + self.patch_size_src)]) 
+                (xy[0], xy[1]),
+                (xy[0] + self.patch_size_src, xy[1]),
+                (xy[0] + self.patch_size_src, xy[1] + self.patch_size_src),
+                (xy[0], xy[1] + self.patch_size_src)])
             for xy in coords[bbox_mask]
         ]
         if threshold == 0:
@@ -239,29 +153,29 @@ class WSIPatcher:
             gdf = gpd.GeoSeries(squares)
             areas = gdf.area
             valid_mask = gdf.intersection(union_mask).area >= threshold * areas
-            
+
         full_mask = bbox_mask
-        full_mask[bbox_mask] &= valid_mask 
+        full_mask[bbox_mask] &= valid_mask
 
         valid_patches_nb = full_mask.sum()
         self.valid_mask = full_mask
         valid_coords = coords[full_mask]
         return valid_patches_nb, valid_coords
-        
+
     def __len__(self):
         return self.valid_patches_nb
-    
+
     def __iter__(self):
         self.i = 0
         return self
-    
+
     def __next__(self):
         if self.i >= self.valid_patches_nb:
             raise StopIteration
         x = self.__getitem__(self.i)
         self.i += 1
         return x
-    
+
     def __getitem__(self, index):
         if 0 <= index < len(self):
             xy = self.valid_coords[index]
@@ -272,14 +186,14 @@ class WSIPatcher:
             return tile, x, y
         else:
             raise IndexError("Index out of range")
-        
+
     def _prepare(self) -> None:
         level, _ = self.wsi.get_best_level_and_custom_downsample(self.downsample, tolerance=0.1)
         level_downsample = int(self.wsi.level_downsamples[level])
         patch_size_level = round(self.patch_size_src / level_downsample)
         overlap_level = round(self.overlap_src / level_downsample)
         return level, patch_size_level, overlap_level
-    
+
     def get_cols_rows(self) -> Tuple[int, int]:
         """ Get the number of columns and rows in the associated WSI
 
@@ -287,7 +201,7 @@ class WSIPatcher:
             Tuple[int, int]: (nb_columns, nb_rows)
         """
         return self.cols, self.rows
-      
+
     def get_tile_xy(self, x: int, y: int) -> Tuple[np.ndarray, int, int]:
 
         tile = self.wsi.read_region(
@@ -305,7 +219,7 @@ class WSIPatcher:
 
         assert x < self.width and y < self.height
         return tile, x, y
-    
+
     def get_tile(self, col: int, row: int) -> Tuple[np.ndarray, int, int]:
         """ get tile at position (column, row)
 
@@ -318,10 +232,10 @@ class WSIPatcher:
         """
         if self.custom_coords is not None:
             raise ValueError("Can't use get_tile as 'custom_coords' was passed to the constructor")
-            
+
         x, y = self._colrow_to_xy(col, row)
         return self.get_tile_xy(x, y)
-    
+
     def _compute_cols_rows(self) -> Tuple[int, int]:
         col = 0
         row = 0
@@ -334,13 +248,13 @@ class WSIPatcher:
             row += 1
             _, y = self._colrow_to_xy(col, row)
         rows = row
-        return cols, rows 
-    
+        return cols, rows
+
 
     def visualize(self) -> Image.Image:
-        """ 
+        """
         The `visualize` function of the class `WSI` overlays patch coordinates computed by the WSIPatcher
-        onto a scaled thumbnail of the WSI. It creates a visualization of the patcher coordinates 
+        onto a scaled thumbnail of the WSI. It creates a visualization of the patcher coordinates
         and returns it as an image.
 
         Returns
@@ -375,10 +289,10 @@ class WSIPatcher:
             x, y = int(x/downsample_factor), int(y/downsample_factor)
             thickness = max(1, thumbnail_patch_size // 10)
             canvas = cv2.rectangle(
-                canvas, 
-                (x, y), 
-                (x + thumbnail_patch_size, y + thumbnail_patch_size), 
-                (255, 0, 0), 
+                canvas,
+                (x, y),
+                (x + thumbnail_patch_size, y + thumbnail_patch_size),
+                (255, 0, 0),
                 thickness
             )
 
@@ -402,12 +316,7 @@ class WSIPatcher:
         cv2.putText(canvas, f'patch={self.patch_size_target} w. overlap={self.overlap} @ {patch_mpp_mag}', (text_x_offset, text_y_spacing * 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
         return Image.fromarray(canvas)
-    
-    def __repr__(self) -> str:
-        patch_mpp_mag = f"{self.dst_mag}x" if self.dst_mag is not None else f"{self.dst_pixel_size}um/px"
-        return f"<patch={self.patch_size_target}, overlap={self.overlap} @ {patch_mpp_mag}>"
 
-    
 class OpenSlideWSIPatcher(WSIPatcher):
     def __init__(self, *args, **kwargs):
         warnings.warn(
