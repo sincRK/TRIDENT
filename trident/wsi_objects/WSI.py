@@ -6,7 +6,7 @@ from PIL import Image
 import os
 import warnings
 import torch
-from typing import List, Tuple, Optional, Literal, Union, Union
+from typing import List, Tuple, Optional, Literal, Union
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -354,109 +354,6 @@ class WSI:
                 predicted_mask[y_start:y_end, x_start:x_end] += patch_pred
         return predicted_mask, mpp_reduction_factor
 
-    def _segment_semantic(
-        self, 
-        segmentation_model: SegmentationModel,
-        target_mag: int, 
-        verbose: bool,
-        device: str,
-        batch_size: int,
-        collate_fn,
-        num_workers: Optional[int],
-        inference_fn
-    ):
-        """
-        
-        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using 
-        a specified segmentation model.
-
-        Args:
-        -----
-        segmentation_model: SegmentationModel
-            model to use for segmentation
-        target_mag: int
-            perform segmentation at this magnification
-        verbose: bool, optional:
-            Whenever to print segmentation progress. Defaults to False.
-        device (str): 
-            The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
-        batch_size : int, optional
-            Batch size for processing patches. Defaults to 16.
-        num_workers: Optional[int], optional:
-            Number of workers to use for the tile dataloader, if set to None the number of workers is automatically inferred. Defaults to None.
-        collate_fn: optional
-            Custom collate function used in the dataloader, it must return a dictionary containing at least 'xcoords' and 'ycoords' as keys (level 0 coordinates)
-            and 'img' if if inference_fn is not provided.
-        inference_fn: optional
-            function used during inference, it will be called like this internally: `inference_fn(model, batch, device)`
-            where batch is the batch returned by collate_fn if provided or img, (xcoords, ycoords) if not provided
-            this function must return a tensor with shape: (B, H, W) and dtype uint8r
-
-        Returns:
-        --------
-        Tuple[np.ndarray, float]]:
-            a downscaled H x W np.ndarray containing class predictions and its downscale factor.
-        """
-        # Get patch iterator
-        destination_mpp = 10 / target_mag
-        patcher = self.create_patcher(
-            patch_size = segmentation_model.input_size,
-            src_pixel_size = self.mpp,
-            dst_pixel_size = destination_mpp,
-            mask=self.gdf_contours if hasattr(self, "gdf_contours") else None
-        )
-        precision = segmentation_model.precision
-        eval_transforms = segmentation_model.eval_transforms
-        dataset = WSIPatcherDataset(patcher, eval_transforms)
-        dataloader = DataLoader(
-            dataset, 
-            batch_size=batch_size, 
-            collate_fn=collate_fn,
-            num_workers=get_num_workers(batch_size, max_workers=self.max_workers) if num_workers is None else num_workers, 
-            pin_memory=True
-        )
-
-        mpp_reduction_factor = self.mpp / destination_mpp
-        width, height = self.get_dimensions()
-        width, height = int(round(width * mpp_reduction_factor)), int(round(height * mpp_reduction_factor))
-        predicted_mask = np.zeros((height, width), dtype=np.uint8)
-
-        dataloader = tqdm(dataloader) if verbose else dataloader
-
-        for batch in dataloader:
-
-            with torch.autocast(device_type=device.split(":")[0], dtype=precision, enabled=(precision != torch.float32)):
-                if collate_fn is not None:
-                    if 'xcoords' not in batch or 'ycoords' not in batch:
-                        raise ValueError(f"collate_fn must return level 0 patch coordinates in 'xcoords' and 'ycoords'")
-                    xcoords, ycoords = torch.tensor(batch['xcoords']), torch.tensor(batch['ycoords'])
-                    if inference_fn is None:
-                        if 'img' not in batch:
-                            raise ValueError(f"collate_fn must return the raw tile in 'img' if inference_fn is not provided.")
-                        imgs = batch['img']
-                else:
-                    imgs, (xcoords, ycoords) = batch
-
-                if inference_fn is not None:
-                    preds = inference_fn(segmentation_model, batch, device).cpu().numpy()
-                else:
-                    imgs = imgs.to(device, dtype=precision)  # Move to device and match dtype
-                    preds = segmentation_model(imgs).cpu().numpy()
-
-            x_starts = np.clip(np.round(xcoords.numpy() * mpp_reduction_factor).astype(int), 0, width - 1) # clip for starts
-            y_starts = np.clip(np.round(ycoords.numpy() * mpp_reduction_factor).astype(int), 0, height - 1)
-            x_ends = np.clip(x_starts + segmentation_model.input_size, 0, width)
-            y_ends = np.clip(y_starts + segmentation_model.input_size, 0, height)
-            
-            for i in range(len(preds)):
-                x_start, x_end = x_starts[i], x_ends[i]
-                y_start, y_end = y_starts[i], y_ends[i]
-                if x_start >= x_end or y_start >= y_end: # invalid patch
-                    continue
-                patch_pred = preds[i][:y_end - y_start, :x_end - x_start]
-                predicted_mask[y_start:y_end, x_start:x_end] += patch_pred
-        return predicted_mask, mpp_reduction_factor
-
     @torch.inference_mode()
     @torch.autocast(device_type="cuda", dtype=torch.float16)
     def segment_tissue(
@@ -500,9 +397,9 @@ class WSI:
 
         Returns:
         --------
-        Union[str, gpd.GeoDataFrame]:
-            The absolute path to where the segmentation as GeoJSON is saved if `job_dir` is not None, else, a GeoDataFrame object.
-            
+        str:
+            The absolute path to where the segmentation as GeoJSON is saved.
+
         Example:
         --------
         >>> wsi.segment_tissue(segmentation_model, target_mag=10, job_dir="output_dir")
@@ -531,10 +428,7 @@ class WSI:
             None,
             num_workers,
             None
-        )
-        
-        # Post-process the mask
-        predicted_mask = (predicted_mask > 0).astype(np.uint8) * 255
+        )        
 
         # # Fill holes if desired
         # if not holes_are_tissue:
@@ -588,7 +482,7 @@ class WSI:
         return_contours=False
     ) -> Union[Tuple[np.ndarray, float], Tuple[np.ndarray, float, gpd.GeoDataFrame]]:
         """
-        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using 
+        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using
         a specified segmentation model.
 
         Args:
@@ -599,7 +493,7 @@ class WSI:
             Target magnification level for segmentation. Defaults to 10.
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
-        device (str): 
+        device (str):
             The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
         verbose: bool, optional:
             Whenever to print segmentation progress. Defaults to False.
@@ -614,13 +508,13 @@ class WSI:
             this function must return a tensor with shape: (B, H, W) and dtype uint8
         return_contours: bool, optional
             Whenever to return the contours of each class in a GeoDataframe. Defaults to False
-            
+
 
         Returns:
         --------
         Union[Tuple[np.ndarray, float], Tuple[np.ndarray, float, gpd.GeoDataFrame]]:
             a downscaled H x W np.ndarray containing class predictions and its downscale factor. Also returns the contours of each class in a GeoDataframe if return_contours is provided.
-            
+
         Example:
         --------
         >>> wsi.segment_tissue(segmentation_model, target_mag=10, job_dir="output_dir")
@@ -660,14 +554,14 @@ class WSI:
                 contour_scale=1/mpp_reduction_factor
             )
             gdfs.append(gdf_contours)
-        
+
         if len(gdfs) > 0:
             gdf = pd.concat(gdfs)
         else:
             gdf = gpd.GeoDataFrame()
 
         return predicted_mask, mpp_reduction_factor, gdf
-        
+
 
     def get_best_level_and_custom_downsample(
         self,
@@ -786,8 +680,11 @@ class WSI:
 
         os.makedirs(os.path.join(save_coords, 'patches'), exist_ok=True)
         out_fname = os.path.join(save_coords, 'patches', str(self.name) + '_patches.h5')
-        coords_to_h5(coords_to_keep, out_fname, patch_size, self.mag, target_mag,
-                     save_coords, self.width, self.height, self.name, overlap)
+        save_h5(out_fname,
+                assets = assets,
+                attributes = {'coords': attributes},
+                mode='w')
+
         return out_fname
 
     def visualize_coords(self, coords_path: str, save_patch_viz: str) -> str:
@@ -830,7 +727,7 @@ class WSI:
         except (KeyError, FileNotFoundError, ValueError) as e:
             warnings.warn(f"Cannot read using Trident coords format ({str(e)}). Trying with CLAM/Fishing-Rod.")
             patcher = WSIPatcher.from_legacy_coords_file(self, coords_path, coords_only=True)
-        
+
         else:
             patcher = self.create_patcher(
                 patch_size=patch_size,
@@ -905,7 +802,7 @@ class WSI:
             level0_magnification = coords_attrs.get('level0_magnification', None)
             target_magnification = coords_attrs.get('target_magnification', None)
             if None in (patch_size, level0_magnification, target_magnification):
-                raise KeyError('Missing attributes in coords_attrs.')         
+                raise KeyError('Missing attributes in coords_attrs.')
 
         except (KeyError, FileNotFoundError, ValueError) as e:
             warnings.warn(f"Cannot read using Trident coords format ({str(e)}). Trying with CLAM/Fishing-Rod.")
@@ -919,7 +816,7 @@ class WSI:
                 custom_coords=coords,
                 coords_only=False,
                 pil=True,
-            )  
+            )
 
 
         dataset = WSIPatcherDataset(patcher, patch_transforms)

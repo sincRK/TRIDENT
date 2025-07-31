@@ -23,7 +23,7 @@ def parse_arguments():
     parser.add_argument("--gpu", type=int, default=0, help="GPU index to use for processing tasks")
     parser.add_argument("--slide_path", type=str, required=True, help="Path to the WSI file to process")
     parser.add_argument("--job_dir", type=str, required=True, help="Directory to store outputs")
-    parser.add_argument('--patch_encoder', type=str, default='conch_v15', 
+    parser.add_argument('--patch_encoder', type=str, default='conch_v15',
                         choices=patch_encoder_registry.keys(),
                         help='Patch encoder to use')
     parser.add_argument("--mag", type=int, choices=[5, 10, 20, 40], default=20,

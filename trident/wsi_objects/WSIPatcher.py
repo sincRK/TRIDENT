@@ -33,12 +33,11 @@ class WSIPatcher:
         Args:
             wsi (WSI): wsi to patch
             patch_size (int): patch width/height in pixel on the slide after rescaling
-            src_pixel_size (float, optional): pixel size in um/px of the slide before rescaling. Defaults to None. Deprecated, this argument will be removed in the next major version and will default to wsi.mpp
-            dst_pixel_size (float, optional): pixel size in um/px of the slide after rescaling. Defaults to None. 
-                If both dst_mag and dst_pixel_size are not None, dst_pixel_size will be used.
-	        src_mag (int, optional): level0 magnification of the slide before rescaling. Defaults to None. Deprecated, this argument will be removed in the next major version and will default to wsi.mag
-            dst_mag (int, optional): target magnification of the slide after rescaling. Defaults to None. If both dst_mag and dst_pixel_size are not None, dst_pixel_size will be used.
-            overlap (int, optional): Overlap between patches in pixels. Defaults to 0. 
+            src_pixel_size (float, optional): pixel size in um/px of the slide before rescaling. Defaults to None.
+            dst_pixel_size (float, optional): pixel size in um/px of the slide after rescaling. Defaults to None.
+	    src_mag (int, optional): level0 magnification of the slide before rescaling. Defaults to None.
+            dst_mag (int, optional): target magnification of the slide after rescaling. Defaults to None.
+            overlap (int, optional): Overlap between patches in pixels. Defaults to 0.
             mask (gpd.GeoDataFrame, optional): geopandas dataframe of Polygons. Defaults to None.
             coords_only (bool, optional): whenever to extract only the coordinates insteaf of coordinates + tile. Default to False.
             threshold (float, optional): minimum proportion of the patch under tissue to be kept.
@@ -56,7 +55,7 @@ class WSIPatcher:
         self.pil = pil
         self.dst_mag = dst_mag
 
-        # set src magnification and pixel size. 
+        # set src magnification and pixel size.
         if src_pixel_size is not None:
             self.src_pixel_size = src_pixel_size
         elif src_mag is not None:
@@ -94,91 +93,6 @@ class WSIPatcher:
             self.valid_patches_nb, self.valid_coords = self._compute_masked(coords, threshold)
         else:
             self.valid_patches_nb, self.valid_coords = len(coords), coords
-            
-    @classmethod
-    def from_legacy_coords(
-        cls, 
-        wsi, 
-        patch_size, 
-        patch_level, 
-        custom_downsample, 
-        coords, 
-        coords_only=False,
-        pil=False
-    ) -> WSIPatcher:
-        """
-        The `from_legacy_coords` function creates a WSIPatcher from legacy coordinates parameters generated 
-        with CLAM or Fishing-Rod. These legacy coordinates parameters include: 
-        `custom_downsample` and `patch_level` instead of the new `patch_size` and `dst_mag`/`dst_mpp` format
-
-        Parameters:
-        -----------
-        wsi : WSI
-            WSI to patch
-        patch_size : int
-            The target patch size at the desired magnification.
-        patch_level : int
-            The patch level used when reading the slide.
-        custom_downsample : int
-            Any additional downsampling applied to the patches.
-        coords : np.array
-            An array of patch coordinates.
-            
-
-        Returns:
-        --------
-        WSIPatcher
-            WSIPatcher created from the given legacy coordinates
-        """
-        src_mpp, dst_mpp, src_mag, dst_mag = None, None, None, None
-        downsample_ratio = (wsi.level_downsamples[patch_level] * custom_downsample)
-        if wsi.mpp is not None:
-            src_mpp = wsi.mpp
-            dst_mpp = wsi.mpp * downsample_ratio
-        else:
-            src_mag = wsi.mag
-            dst_mag = int(wsi.mag / downsample_ratio)
-
-        return WSIPatcher(
-            wsi,
-            patch_size=patch_size,
-            src_mag=src_mag,
-            dst_mag=dst_mag,
-            src_pixel_size=src_mpp,
-            dst_pixel_size=dst_mpp,
-            custom_coords=coords,
-            coords_only=coords_only,
-            pil=pil
-        )
-
-    @classmethod
-    def from_legacy_coords_file(cls, wsi, coords_path, coords_only=False, pil=False) -> WSIPatcher:
-        """
-        The `from_legacy_coords_file` function creates a WSIPatcher from a legacy coordinates file generated 
-        with CLAM or Fishing-Rod.
-
-        Parameters:
-        -----------
-        wsi : WSI
-            WSI to patch
-        coords_path : str
-            Path to legacy coordinates stored as .h5
-        coords_only : bool
-            Whenever the legacy coordinates file only contain coordinates or if it also contains images
-        pil : bool
-            pil argument passed to the WSIPatcher constructor
-            
-
-        Returns:
-        --------
-        WSIPatcher
-            WSIPatcher created from the given legacy coordinates
-        """
-        patch_size, patch_level, custom_downsample, coords = read_coords_legacy(coords_path)
-
-        return cls.from_legacy_coords(
-            wsi, patch_size, patch_level, custom_downsample, coords, coords_only=coords_only, pil=pil)
-    
 
     def _colrow_to_xy(self, col, row):
         """ Convert col row of a tile to its top-left coordinates before rescaling (x, y) """
@@ -402,12 +316,7 @@ class WSIPatcher:
         cv2.putText(canvas, f'patch={self.patch_size_target} w. overlap={self.overlap} @ {patch_mpp_mag}', (text_x_offset, text_y_spacing * 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
         return Image.fromarray(canvas)
-    
-    def __repr__(self) -> str:
-        patch_mpp_mag = f"{self.dst_mag}x" if self.dst_mag is not None else f"{self.dst_pixel_size}um/px"
-        return f"<patch={self.patch_size_target}, overlap={self.overlap} @ {patch_mpp_mag}>"
 
-    
 class OpenSlideWSIPatcher(WSIPatcher):
     def __init__(self, *args, **kwargs):
         warnings.warn(
