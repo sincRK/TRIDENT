@@ -252,9 +252,9 @@ class WSI:
                 raise ValueError(f"Identified mpp is very low: mpp={mpp_x}. Most WSIs are at 20x, 40x magnfication.")
 
     def _segment_semantic(
-        self, 
+        self,
         segmentation_model: SegmentationModel,
-        target_mag: int, 
+        target_mag: int,
         verbose: bool,
         device: str,
         batch_size: int,
@@ -263,8 +263,8 @@ class WSI:
         inference_fn
     ):
         """
-        
-        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using 
+
+        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using
         a specified segmentation model.
 
         Args:
@@ -275,7 +275,7 @@ class WSI:
             perform segmentation at this magnification
         verbose: bool, optional:
             Whenever to print segmentation progress. Defaults to False.
-        device (str): 
+        device (str):
             The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
@@ -306,10 +306,10 @@ class WSI:
         eval_transforms = segmentation_model.eval_transforms
         dataset = WSIPatcherDataset(patcher, eval_transforms)
         dataloader = DataLoader(
-            dataset, 
-            batch_size=batch_size, 
+            dataset,
+            batch_size=batch_size,
             collate_fn=collate_fn,
-            num_workers=get_num_workers(batch_size, max_workers=self.max_workers) if num_workers is None else num_workers, 
+            num_workers=get_num_workers(batch_size, max_workers=self.max_workers) if num_workers is None else num_workers,
             pin_memory=True
         )
 
@@ -344,7 +344,7 @@ class WSI:
             y_starts = np.clip(np.round(ycoords.numpy() * mpp_reduction_factor).astype(int), 0, height - 1)
             x_ends = np.clip(x_starts + segmentation_model.input_size, 0, width)
             y_ends = np.clip(y_starts + segmentation_model.input_size, 0, height)
-            
+
             for i in range(len(preds)):
                 x_start, x_end = x_starts[i], x_ends[i]
                 y_start, y_end = y_starts[i], y_ends[i]
@@ -428,7 +428,7 @@ class WSI:
             None,
             num_workers,
             None
-        )        
+        )
 
         # # Fill holes if desired
         # if not holes_are_tissue:
