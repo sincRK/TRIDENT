@@ -79,15 +79,8 @@ def load_wsi(
 
     elif reader_type is None:
         if ext in ISYNTAX_EXTENSIONS:
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> refactor max_workers setting for isyntax
             max_workers = kwargs.pop("max_workers", 1)
             return ISyntaxWSI(slide_path=slide_path, max_workers=max_workers, **kwargs)
-=======
-            return ISyntaxWSI(slide_path=slide_path, **kwargs)
->>>>>>> ISytnaxWSI class for integrating isyntax files in the trident workflow
         elif ext in OPENSLIDE_EXTENSIONS:
             return OpenSlideWSI(slide_path=slide_path, **kwargs)
         else:

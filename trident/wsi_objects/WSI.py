@@ -676,8 +676,11 @@ class WSI:
 
         os.makedirs(os.path.join(save_coords, 'patches'), exist_ok=True)
         out_fname = os.path.join(save_coords, 'patches', str(self.name) + '_patches.h5')
-        coords_to_h5(coords_to_keep, out_fname, patch_size, self.mag, target_mag,
-                     save_coords, self.width, self.height, self.name, overlap)
+        save_h5(out_fname,
+                assets = assets,
+                attributes = {'coords': attributes},
+                mode='w')
+
         return out_fname
 
     def visualize_coords(self, coords_path: str, save_patch_viz: str) -> str:
