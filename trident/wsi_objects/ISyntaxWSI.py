@@ -74,8 +74,19 @@ class ISyntaxWSI(WSI):
         """
         Read a region from the slide at the given location, level, and size.
         Returns a numpy array (H, W, 3) in RGB or PIL Image if read_as='pil'.
+        Default behaviour is different than openslide in the following:
+        openslide:
+        - location always as mag level 0 indepentent of "level" param
+        - size is based on pixel at level
+
+        pyisyntax:
+        - location scales with the level param
+        - size is based on pixel at level
+
+        To make behaviour close to openslide we have to scale the location
         """
-        x, y = location
+        scale = 2 ** (-level)
+        x, y = int(location[0] * scale), int(location[1] * scale)
         width, height = size
         arr = self.img.read_region(x, y, width, height, level)
         arr = arr[..., :3]  # RGB
