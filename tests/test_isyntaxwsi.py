@@ -25,6 +25,8 @@ class TestISyntaxWSI(unittest.TestCase):
         self.assertGreater(self.wsi.level_count, 0)
         self.assertIsInstance(self.wsi.level_downsamples, list)
         self.assertIsInstance(self.wsi.level_dimensions, list)
+        self.assertEqual(self.wsi.width, self.wsi.level_dimensions[0][0])
+        self.assertEqual(self.wsi.height, self.wsi.level_dimensions[0][1])
         self.assertGreater(self.wsi.mpp, 0)
         self.assertIn("barcode", self.wsi.properties)
         self.assertTrue(hasattr(self.wsi, "mag"))
