@@ -22,9 +22,9 @@ def parse_arguments():
     parser.add_argument("--gpu", type=int, default=0, help="GPU index to use for processing tasks")
     parser.add_argument("--slide_path", type=str, required=True, help="Path to the WSI file to process")
     parser.add_argument("--job_dir", type=str, required=True, help="Directory to store outputs")
-    parser.add_argument('--patch_encoder', type=str, default='conch_v15', 
-                        choices=['conch_v1', 'uni_v1', 'uni_v2', 'ctranspath', 'phikon', 
-                                 'resnet50', 'gigapath', 'virchow', 'virchow2', 
+    parser.add_argument('--patch_encoder', type=str, default='conch_v15',
+                        choices=['conch_v1', 'uni_v1', 'uni_v2', 'ctranspath', 'phikon',
+                                 'resnet50', 'gigapath', 'virchow', 'virchow2',
                                  'hoptimus0', 'hoptimus1', 'phikon_v2', 'conch_v15', 'musk', 'hibou_l',
                                  'kaiko-vits8', 'kaiko-vits16', 'kaiko-vitb8', 'kaiko-vitb16',
                                  'kaiko-vitl14', 'lunit-vits8'],
@@ -32,22 +32,22 @@ def parse_arguments():
     parser.add_argument("--mag", type=int, choices=[5, 10, 20, 40], default=20,
                         help="Magnification at which patches/features are extracted")
     parser.add_argument("--patch_size", type=int, default=256, help="Patch size at which coords/features are extracted")
-    parser.add_argument('--segmenter', type=str, default='hest', 
-                        choices=['hest', 'grandqc',], 
+    parser.add_argument('--segmenter', type=str, default='hest',
+                        choices=['hest', 'grandqc',],
                         help='Type of tissue vs background segmenter. Options are HEST or GrandQC.')
-    parser.add_argument('--seg_conf_thresh', type=float, default=0.5, 
+    parser.add_argument('--seg_conf_thresh', type=float, default=0.5,
                     help='Confidence threshold to apply to binarize segmentation predictions. Lower this threhsold to retain more tissue. Defaults to 0.5. Try 0.4 as 2nd option.')
-    parser.add_argument('--remove_holes', action='store_true', default=False, 
+    parser.add_argument('--remove_holes', action='store_true', default=False,
                         help='Do you want to remove holes?')
-    parser.add_argument('--remove_artifacts', action='store_true', default=False, 
+    parser.add_argument('--remove_artifacts', action='store_true', default=False,
                         help='Do you want to run an additional model to remove artifacts (including penmarks, blurs, stains, etc.)?')
-    parser.add_argument('--remove_penmarks', action='store_true', default=False, 
+    parser.add_argument('--remove_penmarks', action='store_true', default=False,
                         help='Do you want to run an additional model to remove penmarks?')
     parser.add_argument('--custom_mpp_keys', type=str, nargs='+', default=None,
                     help='Custom keys used to store the resolution as MPP (micron per pixel) in your list of whole-slide image.')
-    parser.add_argument('--overlap', type=int, default=0, 
+    parser.add_argument('--overlap', type=int, default=0,
                         help='Absolute overlap for patching in pixels. Defaults to 0. ')
-    parser.add_argument('--batch_size', type=int, default=32, 
+    parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size for feature extraction. Defaults to 32.')
     return parser.parse_args()
 

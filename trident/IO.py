@@ -42,7 +42,7 @@ def collect_valid_slides(
         List[str]: Full paths to valid WSIs.
         OR
         Tuple[List[str], List[str]]: (full paths, relative paths)
-    
+
     Raises:
         ValueError: If custom CSV is invalid or files not found.
     """
@@ -140,11 +140,11 @@ def _get_trident_home():
 
 def has_internet_connection(timeout=3.0) -> bool:
     endpoint = os.environ.get("HF_ENDPOINT", "huggingface.co")
-    
+
     if endpoint.startswith(("http://", "https://")):
         from urllib.parse import urlparse
         endpoint = urlparse(endpoint).netloc
-    
+
     try:
         # Fast socket-level check
         socket.create_connection((endpoint, 443), timeout=timeout)
@@ -187,7 +187,7 @@ def get_weights_path(model_type, encoder_name):
     with open(registry_path, "r") as f:
         registry = json.load(f)
 
-    path = registry.get(encoder_name)    
+    path = registry.get(encoder_name)
     if path:
         path = path if os.path.isabs(path) else os.path.abspath(os.path.join(root, 'model_zoo', path)) # Make path absolute
         if not os.path.exists(path):
@@ -198,8 +198,8 @@ def get_weights_path(model_type, encoder_name):
 
 def create_lock(path, suffix = None):
     """
-    The `create_lock` function creates a lock file to signal that a particular file or process 
-    is currently being worked on. This is especially useful in multiprocessing or distributed 
+    The `create_lock` function creates a lock file to signal that a particular file or process
+    is currently being worked on. This is especially useful in multiprocessing or distributed
     systems to avoid conflicts or multiple processes working on the same resource.
 
     Parameters:
@@ -207,7 +207,7 @@ def create_lock(path, suffix = None):
     path : str
         The path to the file or resource being locked.
     suffix : str, optional
-        An additional suffix to append to the lock file name. This allows for creating distinct 
+        An additional suffix to append to the lock file name. This allows for creating distinct
         lock files for similar resources. Defaults to None.
 
     Returns:
@@ -230,7 +230,7 @@ def create_lock(path, suffix = None):
 
 def remove_lock(path, suffix = None):
     """
-    The `remove_lock` function removes a lock file, signaling that the file or process 
+    The `remove_lock` function removes a lock file, signaling that the file or process
     is no longer in use and is available for other operations.
 
     Parameters:
@@ -259,7 +259,7 @@ def remove_lock(path, suffix = None):
 
 def is_locked(path, suffix = None):
     """
-    The `is_locked` function checks if a resource is currently locked by verifying 
+    The `is_locked` function checks if a resource is currently locked by verifying
     the existence of a `.lock` file.
 
     Parameters:
@@ -290,7 +290,7 @@ def is_locked(path, suffix = None):
 ###########################################################################
 def update_log(path_to_log, key, message):
     """
-    The `update_log` function appends or updates a message in a log file. It is useful for tracking 
+    The `update_log` function appends or updates a message in a log file. It is useful for tracking
     progress or recording errors during a long-running process.
 
     Parameters:
@@ -311,13 +311,13 @@ def update_log(path_to_log, key, message):
     --------
     >>> update_log("processing.log", "slide1", "Processing completed")
     >>> # Appends or updates "slide1: Processing completed" in the log file.
-    """    
+    """
     # Create log if it doesn't exist
     if not os.path.exists(path_to_log):
         with open(path_to_log, 'w') as f:
             f.write(f'{key}: {message}\n')
             return
-        
+
     # If slide id already in log, delete the message and add the new one
     if os.path.exists(path_to_log):
         with open(path_to_log, 'r') as f:
@@ -328,12 +328,12 @@ def update_log(path_to_log, key, message):
                     f.write(line)
             f.write(f'{key}: {message}\n')
         return
-    
+
 ################################################################################
 
 def save_h5(save_path, assets, attributes = None, mode = 'w'):
     """
-    The `save_h5` function saves a dictionary of assets to an HDF5 file. This is commonly used to store 
+    The `save_h5` function saves a dictionary of assets to an HDF5 file. This is commonly used to store
     large datasets or hierarchical data structures in a compact and organized format.
 
     Parameters:
@@ -382,7 +382,7 @@ def save_h5(save_path, assets, attributes = None, mode = 'w'):
                                 dset.attrs[attr_key] = attr_val
                             except:
                                 raise Exception(f'WARNING: Could not save attribute {attr_key} with value {attr_val} for asset {key}')
-                                
+
             else:
                 dset = file[key]
                 dset.resize(len(dset) + data_shape[0], axis=0)
@@ -392,11 +392,11 @@ def save_h5(save_path, assets, attributes = None, mode = 'w'):
 
 class JSONsaver(json.JSONEncoder):
     """
-    The `JSONsaver` class extends the `json.JSONEncoder` to handle objects that are typically 
-    unserializable by the standard JSON encoder. It provides support for custom types, including 
+    The `JSONsaver` class extends the `json.JSONEncoder` to handle objects that are typically
+    unserializable by the standard JSON encoder. It provides support for custom types, including
     NumPy arrays, ranges, PyTorch data types, and callable objects.
 
-    This class is particularly useful when saving complex configurations or datasets to JSON files, 
+    This class is particularly useful when saving complex configurations or datasets to JSON files,
     ensuring that all objects are serialized correctly or replaced with representative strings.
 
     Methods:
@@ -438,19 +438,19 @@ class JSONsaver(json.JSONEncoder):
             if hasattr(obj, '__name__'):
                 if obj.__name__ == '<lambda>':
                     return f'CALLABLE.{id(obj)}' # Unique identifier for lambda functions
-                else:   
+                else:
                     return f'CALLABLE.{obj.__name__}'
             else:
                 return f'CALLABLE.{str(obj)}'
         else:
             print(f"[WARNING] Could not serialize object {obj}")
             return super().default(obj)
-        
+
 
 def read_coords(coords_path):
     """
-    The `read_coords` function reads patch coordinates from an HDF5 file, along with any user-defined 
-    attributes stored during the patching process. This function is essential for workflows that rely 
+    The `read_coords` function reads patch coordinates from an HDF5 file, along with any user-defined
+    attributes stored during the patching process. This function is essential for workflows that rely
     on spatial metadata, such as patch-based analysis in computational pathology.
 
     Parameters:
@@ -481,8 +481,8 @@ def read_coords(coords_path):
 
 def read_coords_legacy(coords_path):
     """
-    The `read_coords_legacy` function reads legacy patch coordinates from an HDF5 file. This function 
-    is designed for compatibility with older patching tools such as CLAM or Fishing-Rod, which used 
+    The `read_coords_legacy` function reads legacy patch coordinates from an HDF5 file. This function
+    is designed for compatibility with older patching tools such as CLAM or Fishing-Rod, which used
     a different structure for storing patching metadata.
 
     Parameters:
@@ -530,14 +530,14 @@ def mask_to_gdf(
     Convert a binary mask into a GeoDataFrame of polygons representing detected regions.
 
     This function processes a binary mask to identify contours, filter them based on specified parameters,
-    and scale them to the desired dimensions. The output is a GeoDataFrame where each row corresponds 
+    and scale them to the desired dimensions. The output is a GeoDataFrame where each row corresponds
     to a detected region, with polygons representing the tissue contours and their associated holes.
 
     Args:
         mask (np.ndarray): The binary mask to process, where non-zero regions represent areas of interest.
         keep_ids (List[int], optional): A list of contour indices to keep. Defaults to an empty list (keep all).
         exclude_ids (List[int], optional): A list of contour indices to exclude. Defaults to an empty list.
-        max_nb_holes (int, optional): The maximum number of holes to retain for each contour. 
+        max_nb_holes (int, optional): The maximum number of holes to retain for each contour.
             Use 0 to retain no holes. Defaults to 0.
         min_contour_area (float, optional): Minimum area (in pixels) for a contour to be retained. Defaults to 1000.
         pixel_size (float, optional): Pixel size of level 0. Defaults to 1.
@@ -582,7 +582,7 @@ def mask_to_gdf(
         'min_hole_area': 4000 * pixel_size ** 2
     }
 
-    if filter_params: 
+    if filter_params:
         foreground_contours, hole_contours = filter_contours(contours, hierarchy, filter_params, pixel_size)  # Necessary for filtering out artifacts
 
     if len(foreground_contours) == 0:
@@ -606,16 +606,16 @@ def mask_to_gdf(
             if not polygon.is_valid:
                 polygon = make_valid(polygon)
         polygons.append(polygon)
-    
+
     gdf_contours = gpd.GeoDataFrame(pd.DataFrame(tissue_ids, columns=['tissue_id']), geometry=polygons)
-    
+
     return gdf_contours
 
 
 def filter_contours(contours, hierarchy, filter_params, pixel_size):
     """
-    The `filter_contours` function processes a list of contours and their hierarchy, filtering 
-    them based on specified criteria such as minimum area and hole limits. This function is 
+    The `filter_contours` function processes a list of contours and their hierarchy, filtering
+    them based on specified criteria such as minimum area and hole limits. This function is
     typically used in digital pathology workflows to isolate meaningful tissue regions.
 
     Original implementation from: https://github.com/mahmoodlab/CLAM/blob/f1e93945d5f5ac6ed077cb020ed01cf984780a77/wsi_core/WholeSlideImage.py#L97
@@ -696,8 +696,8 @@ def filter_contours(contours, hierarchy, filter_params, pixel_size):
 
 def make_valid(polygon):
     """
-    The `make_valid` function attempts to fix invalid polygons by applying small buffer operations. 
-    This is particularly useful in cases where geometric operations result in self-intersecting 
+    The `make_valid` function attempts to fix invalid polygons by applying small buffer operations.
+    This is particularly useful in cases where geometric operations result in self-intersecting
     or malformed polygons.
 
     Parameters:
@@ -722,7 +722,7 @@ def make_valid(polygon):
     >>> print(valid_polygon.is_valid)
     True
     """
-    
+
     for i in [0, 0.1, -0.1, 0.2]:
         new_polygon = polygon.buffer(i)
         if isinstance(new_polygon, Polygon) and new_polygon.is_valid:
@@ -732,7 +732,7 @@ def make_valid(polygon):
 
 def scale_contours(contours, scale, is_nested=False):
     """
-    The `scale_contours` function scales the dimensions of contours or nested contours (e.g., holes) 
+    The `scale_contours` function scales the dimensions of contours or nested contours (e.g., holes)
     by a specified factor. This is useful for resizing detected regions in masks or GeoDataFrames.
 
     Parameters:
@@ -765,8 +765,8 @@ def overlay_gdf_on_thumbnail(
     gdf_contours, thumbnail, contours_saveto, scale, tissue_color=(0, 255, 0), hole_color=(255, 0, 0)
 ):
     """
-    The `overlay_gdf_on_thumbnail` function overlays polygons from a GeoDataFrame onto a scaled 
-    thumbnail image using OpenCV. This is particularly useful for visualizing tissue regions and 
+    The `overlay_gdf_on_thumbnail` function overlays polygons from a GeoDataFrame onto a scaled
+    thumbnail image using OpenCV. This is particularly useful for visualizing tissue regions and
     their boundaries on smaller representations of whole-slide images.
 
     Parameters:
@@ -792,9 +792,9 @@ def overlay_gdf_on_thumbnail(
     Example:
     --------
     >>> overlay_gdf_on_thumbnail(
-    ...     gdf_contours=gdf, 
-    ...     thumbnail=thumbnail_img, 
-    ...     contours_saveto="annotated_thumbnail.png", 
+    ...     gdf_contours=gdf,
+    ...     thumbnail=thumbnail_img,
+    ...     contours_saveto="annotated_thumbnail.png",
     ...     scale=0.5
     ... )
     """
@@ -818,20 +818,20 @@ def overlay_gdf_on_thumbnail(
     nz = np.nonzero(cv2.cvtColor(thumbnail, cv2.COLOR_BGR2GRAY))  # Non-zero pixel locations
     xmin, xmax, ymin, ymax = np.min(nz[1]), np.max(nz[1]), np.min(nz[0]), np.max(nz[0])
     cropped_annotated = thumbnail[ymin:ymax, xmin:xmax]
- 
+
     # Save the annotated image
     os.makedirs(os.path.dirname(contours_saveto), exist_ok=True)
     cropped_annotated = cv2.cvtColor(cropped_annotated, cv2.COLOR_BGR2RGB)
     cv2.imwrite(contours_saveto, cropped_annotated)
 
 # .tools.register_tool(imports=["import numpy as np"])
-def get_num_workers(batch_size: int, 
-                    factor: float = 0.75, 
-                    fallback: int = 16, 
+def get_num_workers(batch_size: int,
+                    factor: float = 0.75,
+                    fallback: int = 16,
                     max_workers: int | None = None) -> int:
     """
-    The `get_num_workers` function calculates the optimal number of workers for a PyTorch DataLoader, 
-    balancing system resources and workload. This ensures efficient data loading while avoiding 
+    The `get_num_workers` function calculates the optimal number of workers for a PyTorch DataLoader,
+    balancing system resources and workload. This ensures efficient data loading while avoiding
     resource overutilization.
 
     Parameters:
@@ -867,7 +867,7 @@ def get_num_workers(batch_size: int,
     # Disable pytorch multiprocessing on Windows
     if os.name == 'nt':
         return 0
-    
+
     num_cores = os.cpu_count() or fallback
     num_workers = int(factor * num_cores)  # Use a fraction of available cores
     max_workers = max_workers or (2 * batch_size)  # Optional cap
