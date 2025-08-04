@@ -12,6 +12,7 @@ import os
 from trident import load_wsi
 from trident.segmentation_models import segmentation_model_factory
 from trident.patch_encoder_models import encoder_factory
+from trident.patch_encoder_models import encoder_registry as patch_encoder_registry
 
 
 def parse_arguments():
@@ -28,6 +29,8 @@ def parse_arguments():
                                  'hoptimus0', 'hoptimus1', 'phikon_v2', 'conch_v15', 'musk', 'hibou_l',
                                  'kaiko-vits8', 'kaiko-vits16', 'kaiko-vitb8', 'kaiko-vitb16',
                                  'kaiko-vitl14', 'lunit-vits8'],
+    parser.add_argument('--patch_encoder', type=str, default='conch_v15',
+                        choices=patch_encoder_registry.keys(),
                         help='Patch encoder to use')
     parser.add_argument("--mag", type=int, choices=[5, 10, 20, 40], default=20,
                         help="Magnification at which patches/features are extracted")
