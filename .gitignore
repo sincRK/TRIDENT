@@ -1,12 +1,12 @@
 # Ignore Copilot and workspace specs/docs
-TRIDENT/trident/wsi_objects/specs/
-TRIDENT/trident/wsi_objects/specs/*
-TRIDENT/trident/wsi_objects/*.md
-TRIDENT/trident/wsi_objects/specs/*.md
-TRIDENT/docs/*.md
-TRIDENT/*.md
-!TRIDENT/README.md
-!TRIDENT/docs/README.md
+trident/wsi_objects/specs/
+trident/wsi_objects/specs/*
+trident/wsi_objects/*.md
+trident/wsi_objects/specs/*.md
+docs/*.md
+*.md
+!README.md
+!docs/README.md
 
 # Python/VSCode/OS junk
 __pycache__/
@@ -26,6 +26,6 @@ TRIDENT/tests/test_isyntax_slide_processing/
 TRIDENT/tests/test_single_slide_processing/
 
 # Local ckpts
-TRIDENT/trident/patch_encoder_models/local_ckpts.json
-TRIDENT/trident/slide_encoder_models/local_ckpts.json
-TRIDENT/trident/segmentation_models/local_ckpts.json
+trident/patch_encoder_models/local_ckpts.json
+trident/slide_encoder_models/local_ckpts.json
+trident/segmentation_models/local_ckpts.json
