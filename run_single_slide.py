@@ -24,12 +24,6 @@ def parse_arguments():
     parser.add_argument("--slide_path", type=str, required=True, help="Path to the WSI file to process")
     parser.add_argument("--job_dir", type=str, required=True, help="Directory to store outputs")
     parser.add_argument('--patch_encoder', type=str, default='conch_v15',
-                        choices=['conch_v1', 'uni_v1', 'uni_v2', 'ctranspath', 'phikon',
-                                 'resnet50', 'gigapath', 'virchow', 'virchow2',
-                                 'hoptimus0', 'hoptimus1', 'phikon_v2', 'conch_v15', 'musk', 'hibou_l',
-                                 'kaiko-vits8', 'kaiko-vits16', 'kaiko-vitb8', 'kaiko-vitb16',
-                                 'kaiko-vitl14', 'lunit-vits8'],
-    parser.add_argument('--patch_encoder', type=str, default='conch_v15',
                         choices=patch_encoder_registry.keys(),
                         help='Patch encoder to use')
     parser.add_argument("--mag", type=int, choices=[5, 10, 20, 40], default=20,
