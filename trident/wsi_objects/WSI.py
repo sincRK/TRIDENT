@@ -1,18 +1,22 @@
 from __future__ import annotations
 from abc import abstractmethod
+from abc import abstractmethod
 import numpy as np
 from PIL import Image
 import os
 import warnings
 import torch
-from typing import List, Tuple, Optional, Literal, Union
+from typing import List, Tuple, Optional, Literal, Union, Union
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from trident.segmentation_models.load import SegmentationModel
+from trident.segmentation_models.load import SegmentationModel
 from trident.wsi_objects.WSIPatcher import *
 from trident.wsi_objects.WSIPatcherDataset import WSIPatcherDataset
 from trident.IO import (
+    save_h5, read_coords,
+    mask_to_gdf, overlay_gdf_on_thumbnail, get_num_workers, coords_to_h5
     save_h5, read_coords,
     mask_to_gdf, overlay_gdf_on_thumbnail, get_num_workers, coords_to_h5
 )
@@ -350,10 +354,114 @@ class WSI:
                 predicted_mask[y_start:y_end, x_start:x_end] += patch_pred
         return predicted_mask, mpp_reduction_factor
 
+    def _segment_semantic(
+        self, 
+        segmentation_model: SegmentationModel,
+        target_mag: int, 
+        verbose: bool,
+        device: str,
+        batch_size: int,
+        collate_fn,
+        num_workers: Optional[int],
+        inference_fn
+    ):
+        """
+        
+        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using 
+        a specified segmentation model.
+
+        Args:
+        -----
+        segmentation_model: SegmentationModel
+            model to use for segmentation
+        target_mag: int
+            perform segmentation at this magnification
+        verbose: bool, optional:
+            Whenever to print segmentation progress. Defaults to False.
+        device (str): 
+            The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
+        batch_size : int, optional
+            Batch size for processing patches. Defaults to 16.
+        num_workers: Optional[int], optional:
+            Number of workers to use for the tile dataloader, if set to None the number of workers is automatically inferred. Defaults to None.
+        collate_fn: optional
+            Custom collate function used in the dataloader, it must return a dictionary containing at least 'xcoords' and 'ycoords' as keys (level 0 coordinates)
+            and 'img' if if inference_fn is not provided.
+        inference_fn: optional
+            function used during inference, it will be called like this internally: `inference_fn(model, batch, device)`
+            where batch is the batch returned by collate_fn if provided or img, (xcoords, ycoords) if not provided
+            this function must return a tensor with shape: (B, H, W) and dtype uint8r
+
+        Returns:
+        --------
+        Tuple[np.ndarray, float]]:
+            a downscaled H x W np.ndarray containing class predictions and its downscale factor.
+        """
+        # Get patch iterator
+        destination_mpp = 10 / target_mag
+        patcher = self.create_patcher(
+            patch_size = segmentation_model.input_size,
+            src_pixel_size = self.mpp,
+            dst_pixel_size = destination_mpp,
+            mask=self.gdf_contours if hasattr(self, "gdf_contours") else None
+        )
+        precision = segmentation_model.precision
+        eval_transforms = segmentation_model.eval_transforms
+        dataset = WSIPatcherDataset(patcher, eval_transforms)
+        dataloader = DataLoader(
+            dataset, 
+            batch_size=batch_size, 
+            collate_fn=collate_fn,
+            num_workers=get_num_workers(batch_size, max_workers=self.max_workers) if num_workers is None else num_workers, 
+            pin_memory=True
+        )
+
+        mpp_reduction_factor = self.mpp / destination_mpp
+        width, height = self.get_dimensions()
+        width, height = int(round(width * mpp_reduction_factor)), int(round(height * mpp_reduction_factor))
+        predicted_mask = np.zeros((height, width), dtype=np.uint8)
+
+        dataloader = tqdm(dataloader) if verbose else dataloader
+
+        for batch in dataloader:
+
+            with torch.autocast(device_type=device.split(":")[0], dtype=precision, enabled=(precision != torch.float32)):
+                if collate_fn is not None:
+                    if 'xcoords' not in batch or 'ycoords' not in batch:
+                        raise ValueError(f"collate_fn must return level 0 patch coordinates in 'xcoords' and 'ycoords'")
+                    xcoords, ycoords = torch.tensor(batch['xcoords']), torch.tensor(batch['ycoords'])
+                    if inference_fn is None:
+                        if 'img' not in batch:
+                            raise ValueError(f"collate_fn must return the raw tile in 'img' if inference_fn is not provided.")
+                        imgs = batch['img']
+                else:
+                    imgs, (xcoords, ycoords) = batch
+
+                if inference_fn is not None:
+                    preds = inference_fn(segmentation_model, batch, device).cpu().numpy()
+                else:
+                    imgs = imgs.to(device, dtype=precision)  # Move to device and match dtype
+                    preds = segmentation_model(imgs).cpu().numpy()
+
+            x_starts = np.clip(np.round(xcoords.numpy() * mpp_reduction_factor).astype(int), 0, width - 1) # clip for starts
+            y_starts = np.clip(np.round(ycoords.numpy() * mpp_reduction_factor).astype(int), 0, height - 1)
+            x_ends = np.clip(x_starts + segmentation_model.input_size, 0, width)
+            y_ends = np.clip(y_starts + segmentation_model.input_size, 0, height)
+            
+            for i in range(len(preds)):
+                x_start, x_end = x_starts[i], x_ends[i]
+                y_start, y_end = y_starts[i], y_ends[i]
+                if x_start >= x_end or y_start >= y_end: # invalid patch
+                    continue
+                patch_pred = preds[i][:y_end - y_start, :x_end - x_start]
+                predicted_mask[y_start:y_end, x_start:x_end] += patch_pred
+        return predicted_mask, mpp_reduction_factor
+
     @torch.inference_mode()
     @torch.autocast(device_type="cuda", dtype=torch.float16)
     def segment_tissue(
         self,
+        segmentation_model: SegmentationModel,
         segmentation_model: SegmentationModel,
         target_mag: int = 10,
         holes_are_tissue: bool = True,
@@ -361,8 +469,9 @@ class WSI:
         batch_size: int = 16,
         device: str = 'cuda:0',
         verbose=False,
+        num_workers=None,
         num_workers=None
-    ) -> Union[str, gpd.GeoDataFrame]:
+    ) -> Union[Union[str, gpd.GeoDataFrame], gpd.GeoDataFrame]:
         """
         The `segment_tissue` function of the class `WSI` segments tissue regions in the WSI using
         a specified segmentation model. It processes the WSI at a target magnification level, optionally
@@ -371,13 +480,14 @@ class WSI:
         Args:
         -----
         segmentation_model : SegmentationModel
+        segmentation_model : SegmentationModel
             The model used for tissue segmentation.
         target_mag : int, optional
             Target magnification level for segmentation. Defaults to 10.
         holes_are_tissue : bool, optional
             Whether to treat holes in the mask as tissue. Defaults to True.
         job_dir :  Optional[str], optional
-            Directory to save the segmentation results, if None, this method directly returns the contours as a GeoDataframe without saving files. Defaults to None.
+            Directory to save the segmentation results, if None, this method directly returns the contours as a GeoDataframe without saving files, if None, this method directly returns the contours as a GeoDataframe without saving files. Defaults to None.
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
         device (str):
