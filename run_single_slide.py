@@ -46,6 +46,8 @@ def parse_arguments():
                         help='Absolute overlap for patching in pixels. Defaults to 0. ')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size for feature extraction. Defaults to 32.')
+    parser.add_argument('--mpp', type=float, default=None,
+                        help="Hard force mpp setting for images with faulty metadata.")
     return parser.parse_args()
 
 
@@ -56,7 +58,7 @@ def process_slide(args):
 
     # Initialize the WSI
     print(f"Processing slide: {args.slide_path}")
-    slide = load_wsi(slide_path=args.slide_path, lazy_init=False, custom_mpp_keys=args.custom_mpp_keys)
+    slide = load_wsi(slide_path=args.slide_path, lazy_init=False, custom_mpp_keys=args.custom_mpp_keys, mpp=args.mpp)
 
     # Step 1: Tissue Segmentation
     print("Running tissue segmentation...")
