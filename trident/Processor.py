@@ -5,7 +5,7 @@ from tqdm import tqdm
 from typing import Optional, List, Dict, Any
 from inspect import signature
 import geopandas as gpd
-import pandas as pd 
+import pandas as pd
 
 from trident import load_wsi, WSIReaderType
 from trident.IO import create_lock, remove_lock, is_locked, update_log, collect_valid_slides
@@ -27,46 +27,46 @@ class Processor:
         custom_list_of_wsis: Optional[str] = None,
         max_workers: Optional[int] = None,
         reader_type: Optional[WSIReaderType] = None,
-        search_nested: bool = False, 
+        search_nested: bool = False,
     ) -> None:
         """
-        The `Processor` class handles all preprocessing steps starting from whole-slide images (WSIs). 
-    
+        The `Processor` class handles all preprocessing steps starting from whole-slide images (WSIs).
+
         Available methods:
             - `run_segmentation_job`: Performs tissue segmentation on all slides managed by the processor.
             - `run_patching_job`: Extracts patch coordinates from the segmented tissue regions of slides.
             - `run_patch_feature_extraction_job`: Extracts patch-level features using a specified patch encoder.
                 - Deprecated alias: `run_feature_extraction_job`
             - `run_slide_feature_extraction_job`: Extracts slide-level features using a specified slide encoder.
-            
+
         Parameters:
-            job_dir (str): 
-                The directory where the results of processing, including segmentations, patches, and extracted features, 
+            job_dir (str):
+                The directory where the results of processing, including segmentations, patches, and extracted features,
                 will be saved. This should be an existing directory with sufficient storage.
-            wsi_source (str): 
-                The directory containing the WSIs to be processed. This can either be a local directory 
-                or a network-mounted drive. All slides in this directory matching the specified file 
+            wsi_source (str):
+                The directory containing the WSIs to be processed. This can either be a local directory
+                or a network-mounted drive. All slides in this directory matching the specified file
                 extensions will be considered for processing.
-            wsi_ext (List[str]): 
-                A list of accepted WSI file extensions, such as ['.ndpi', '.svs']. This allows for 
-                filtering slides based on their format. If set to None, a default list of common extensions 
+            wsi_ext (List[str]):
+                A list of accepted WSI file extensions, such as ['.ndpi', '.svs']. This allows for
+                filtering slides based on their format. If set to None, a default list of common extensions
                 will be used. Defaults to None.
-            wsi_cache (str, optional): 
-                [DEPRECATED as of v0.2.0] An optional directory for caching WSIs locally. If specified, slides will be copied 
-                from the source directory to this local directory before processing, improving performance 
+            wsi_cache (str, optional):
+                [DEPRECATED as of v0.2.0] An optional directory for caching WSIs locally. If specified, slides will be copied
+                from the source directory to this local directory before processing, improving performance
                 when the source is a network drive. Defaults to None.
             clear_cache (str, optional):
-                [DEPRECATED as of v0.2.0] A flag indicating whether slides in the cache should be deleted after processing. 
-                This helps manage storage space. Defaults to False. 
-            skip_errors (bool, optional): 
-                A flag specifying whether to continue processing if an error occurs on a slide. 
+                [DEPRECATED as of v0.2.0] A flag indicating whether slides in the cache should be deleted after processing.
+                This helps manage storage space. Defaults to False.
+            skip_errors (bool, optional):
+                A flag specifying whether to continue processing if an error occurs on a slide.
                 If set to False, the process will stop on the first error. Defaults to False.
-            custom_mpp_keys (List[str], optional): 
-                A list of custom keys in the slide metadata for retrieving the microns per pixel (MPP) value. 
+            custom_mpp_keys (List[str], optional):
+                A list of custom keys in the sqlide metadata for retrieving the microns per pixel (MPP) value.
                 If not provided, standard keys will be used. Defaults to None.
-            custom_list_of_wsis (str, optional): 
-                Path to a csv file with a custom list of WSIs to process in a field called 'wsi' (including extensions). If provided, only 
-                these slides will be considered for processing. Defaults to None, which means all 
+            custom_list_of_wsis (str, optional):
+                Path to a csv file with a custom list of WSIs to process in a field called 'wsi' (including extensions). If provided, only
+                these slides will be considered for processing. Defaults to None, which means all
                 slides matching the wsi_ext extensions will be processed.
                 Note: If `custom_list_of_wsis` is provided, any names that do not match the available slides will be ignored, and a warning will be printed.
             max_workers (int, optional):
@@ -75,12 +75,12 @@ class Processor:
             reader_type (WSIReaderType, optional):
                 Force the image reader engine to use. Options are are ["openslide", "image", "cucim"]. Defaults to None
                 (auto-determine the right engine based on image extension).
-            search_nested (bool, optional):  
+            search_nested (bool, optional):
                 If True, the processor will recursively search for WSIs within all subdirectories of `wsi_source`.
-                All matching files (based on `wsi_ext`) found at any depth within the directory  
-                tree will be included. Each slide will be identified by its relative path to `wsi_source`, but only  
-                the filename (excluding directory structure) will be used for downstream outputs (e.g., segmentation filenames).  
-                If False, only files directly inside `wsi_source` will be considered.  
+                All matching files (based on `wsi_ext`) found at any depth within the directory
+                tree will be included. Each slide will be identified by its relative path to `wsi_source`, but only
+                the filename (excluding directory structure) will be used for downstream outputs (e.g., segmentation filenames).
+                If False, only files directly inside `wsi_source` will be considered.
                 Defaults to False.
 
 
@@ -101,7 +101,7 @@ class Processor:
         Raises:
             AssertionError: If `wsi_ext` is not a list or if any extension does not start with a period.
         """
-        
+
         if not (sys.version_info.major >= 3 and sys.version_info.minor >= 9):
             raise EnvironmentError("Trident requires Python 3.9 or above. Python 3.10 is recommended.")
 
@@ -164,33 +164,33 @@ class Processor:
             self.wsis.append(slide)
 
     def run_segmentation_job(
-        self, 
-        segmentation_model: torch.nn.Module, 
-        seg_mag: int = 10, 
+        self,
+        segmentation_model: torch.nn.Module,
+        seg_mag: int = 10,
         holes_are_tissue: bool = False,
         batch_size: int = 16,
         artifact_remover_model: torch.nn.Module = None,
-        device: str = 'cuda:0', 
+        device: str = 'cuda:0',
     ) -> str:
         """
-        The `run_segmentation_job` function performs tissue segmentation on all slides managed by the processor. 
-        It uses a machine learning model to identify tissue regions and saves the resulting segmentations to the 
+        The `run_segmentation_job` function performs tissue segmentation on all slides managed by the processor.
+        It uses a machine learning model to identify tissue regions and saves the resulting segmentations to the
         output directory. This function is essential for workflows that require detailed tissue delineation.
 
         Parameters:
-            segmentation_model (torch.nn.Module): 
-                A pre-trained PyTorch model that performs the tissue segmentation. This model should be compatible 
+            segmentation_model (torch.nn.Module):
+                A pre-trained PyTorch model that performs the tissue segmentation. This model should be compatible
                 with the expected input data format of WSIs.
-            seg_mag (int, optional): 
-                The magnification level at which segmentation is performed. For example, a value of 10 indicates 
+            seg_mag (int, optional):
+                The magnification level at which segmentation is performed. For example, a value of 10 indicates
                 10x magnification. Defaults to 10.
-            holes_are_tissue (bool, optional): 
+            holes_are_tissue (bool, optional):
                 Specifies whether to treat holes within tissue regions as part of the tissue. Defaults to False.
-            batch_size (int, optional): 
+            batch_size (int, optional):
                 The batch size for segmentation. Defaults to 16.
-            artifact_remover_model (torch.nn.Module, optional): 
+            artifact_remover_model (torch.nn.Module, optional):
                 A pre-trained PyTorch model that can remove artifacts from an existing segmentation. Defaults to None.
-            device (str): 
+            device (str):
                 The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
 
         Returns:
@@ -216,7 +216,7 @@ class Processor:
         )
 
         self.loop = tqdm(self.wsis, desc='Segmenting tissue', total = len(self.wsis))
-        for wsi in self.loop:   
+        for wsi in self.loop:
             # Check if contour already exists
             if os.path.exists(os.path.join(saveto, f'{wsi.name}.jpg')) and not is_locked(os.path.join(saveto, f'{wsi.name}.jpg')):
                 self.loop.set_postfix_str(f'{wsi.name} already segmented. Skipping...')
@@ -269,38 +269,38 @@ class Processor:
                     continue
                 else:
                     raise e
-                
+
         # Return the directory where the contours are saved
         return saveto
 
     def run_patching_job(
-        self, 
-        target_magnification: int, 
-        patch_size: int, 
-        overlap: int = 0, 
-        saveto: str | None = None, 
+        self,
+        target_magnification: int,
+        patch_size: int,
+        overlap: int = 0,
+        saveto: str | None = None,
         visualize: bool = True,
         min_tissue_proportion: float = 0.,
     ) -> str:
         """
-        The `run_patching_job` function extracts patches from the segmented tissue regions of slides. 
+        The `run_patching_job` function extracts patches from the segmented tissue regions of slides.
         These patches are saved as coordinates in an h5 file for each slide.
 
         Parameters:
-            target_magnification (int): 
-                The magnification level for extracting patches. Higher magnifications result in smaller 
+            target_magnification (int):
+                The magnification level for extracting patches. Higher magnifications result in smaller
                 but more detailed patches.
-            patch_size (int): 
+            patch_size (int):
                 The size of each patch in pixels. This refers to the dimensions of the patch at the target magnification.
-            overlap (int, optional): 
+            overlap (int, optional):
                 The amount of overlap between adjacent patches, specified in pixels. Defaults to 0.
-            saveto (str, optional): 
-                The directory where patch data and visualizations will be saved. If not provided, a directory 
+            saveto (str, optional):
+                The directory where patch data and visualizations will be saved. If not provided, a directory
                 name will be generated automatically. Defaults to None.
-            visualize (bool, optional): 
+            visualize (bool, optional):
                 Whether to generate and save visualizations of the patches. Defaults to True.
-            min_tissue_proportion: float, optional 
-                Minimum proportion of the patch under tissue to be kept. Defaults to 0. 
+            min_tissue_proportion: float, optional
+                Minimum proportion of the patch under tissue to be kept. Defaults to 0.
 
         Returns:
             str: Absolute path to directory containing patch coordinates.
@@ -310,9 +310,9 @@ class Processor:
         Extract patches with a size of 256x256 pixels at 20x magnification:
 
         >>> processor.run_patching_job(
-        ...     target_magnification=20, 
-        ...     patch_size=256, 
-        ...     overlap=32, 
+        ...     target_magnification=20,
+        ...     patch_size=256,
+        ...     overlap=32,
         ...     saveto="output/patches/"
         ... )
         """
@@ -335,14 +335,14 @@ class Processor:
             ignore = ['segmentation_model', 'loop', 'valid_slides', 'wsis']
         )
         self.loop = tqdm(self.wsis, desc=f'Saving tissue coordinates to {saveto}', total = len(self.wsis))
-        for wsi in self.loop:    
-        
+        for wsi in self.loop:
+
             # Check if patch coords already exist
             if os.path.exists(os.path.join(self.job_dir, saveto, 'patches', f'{wsi.name}_patches.h5')):
                 self.loop.set_postfix_str(f'Patch coords already generated for {wsi.name}. Skipping...')
                 update_log(os.path.join(self.job_dir, saveto, '_logs_coords.txt'), f'{wsi.name}{wsi.ext}', 'Coords generated')
                 continue
-            
+
             # Check if another process has claimed this slide
             if is_locked(os.path.join(self.job_dir, saveto, 'patches', f'{wsi.name}_patches.h5')):
                 self.loop.set_postfix_str(f'{wsi.name} is locked. Skipping...')
@@ -353,7 +353,7 @@ class Processor:
                 self.loop.set_postfix_str(f'GeoJSON not found for {wsi.name}. Skipping...')
                 update_log(os.path.join(self.job_dir, saveto, '_logs_coords.txt'), f'{wsi.name}{wsi.ext}', 'GeoJSON not found.')
                 continue
-            
+
             # Check if GeoJSON is empty
             gdf = gpd.read_file(wsi.tissue_seg_path, rows=1)
             if gdf.empty:
@@ -376,7 +376,7 @@ class Processor:
                 )
 
                 # save tissue coords visualization
-                if visualize:  
+                if visualize:
                     wsi.visualize_coords(
                         coords_path=os.path.join(self.job_dir, saveto, 'patches', f'{wsi.name}_patches.h5'),
                         save_patch_viz=os.path.join(self.job_dir, save_patch_viz),
@@ -392,56 +392,56 @@ class Processor:
                     continue
                 else:
                     raise e
-        
+
         # Return the directory where the coordinates are saved
         return os.path.join(self.job_dir, saveto)
 
     @deprecated
     def run_feature_extraction_job(
-        self, 
-        coords_dir: str, 
-        patch_encoder: torch.nn.Module, 
-        device: str, 
-        saveas: str = 'h5', 
-        batch_limit: int = 512, 
+        self,
+        coords_dir: str,
+        patch_encoder: torch.nn.Module,
+        device: str,
+        saveas: str = 'h5',
+        batch_limit: int = 512,
         saveto: str | None = None
     ) -> str:
         self.run_patch_feature_extraction_job(
-            coords_dir, 
-            patch_encoder, 
-            device, 
-            saveas, 
-            batch_limit, 
+            coords_dir,
+            patch_encoder,
+            device,
+            saveas,
+            batch_limit,
             saveto,
         )
-        
+
     def run_patch_feature_extraction_job(
-        self, 
-        coords_dir: str, 
-        patch_encoder: torch.nn.Module, 
-        device: str, 
-        saveas: str = 'h5', 
-        batch_limit: int = 512, 
+        self,
+        coords_dir: str,
+        patch_encoder: torch.nn.Module,
+        device: str,
+        saveas: str = 'h5',
+        batch_limit: int = 512,
         saveto: str | None = None
     ) -> str:
         """
-        The `run_feature_extraction_job` function computes features from the patches generated during the 
-        patching step. These features are extracted using a deep learning model and saved in a specified format. 
+        The `run_feature_extraction_job` function computes features from the patches generated during the
+        patching step. These features are extracted using a deep learning model and saved in a specified format.
         This step is often used in workflows that involve downstream analysis, such as classification or clustering.
 
         Parameters:
-            coords_dir (str): 
+            coords_dir (str):
                 Path to the directory containing patch coordinates, which are used to locate patches for feature extraction.
-            patch_encoder (torch.nn.Module): 
+            patch_encoder (torch.nn.Module):
                 A pre-trained PyTorch model used to compute features from the extracted patches.
-            device (str): 
+            device (str):
                 The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
-            saveas (str, optional): 
+            saveas (str, optional):
                 The format in which extracted features are saved. Can be 'h5' or 'pt'. Defaults to 'h5'.
-            batch_limit (int, optional): 
+            batch_limit (int, optional):
                 The maximum number of patches processed in a single batch. Defaults to 512.
-            saveto (str, optional): 
-                Directory where the extracted features will be saved. If not provided, a directory name will 
+            saveto (str, optional):
+                Directory where the extracted features will be saved. If not provided, a directory name will
                 be generated automatically. Defaults to None.
 
         Returns:
@@ -474,7 +474,7 @@ class Processor:
 
         log_fp = os.path.join(self.job_dir, coords_dir, f'_logs_feats_{patch_encoder.enc_name}.txt')
         self.loop = tqdm(self.wsis, desc=f'Extracting patch features from coords in {coords_dir}', total = len(self.wsis))
-        for wsi in self.loop:    
+        for wsi in self.loop:
             wsi_feats_fp = os.path.join(self.job_dir, saveto, f'{wsi.name}.{saveas}')
             # Check if features already exist
             if os.path.exists(wsi_feats_fp) and not is_locked(wsi_feats_fp):
@@ -519,7 +519,7 @@ class Processor:
                     continue
                 else:
                     raise e
-        
+
         # Return the directory where the features are saved
         return os.path.join(self.job_dir, saveto)
 
@@ -528,8 +528,8 @@ class Processor:
         slide_encoder: torch.nn.Module,
         coords_dir: str,
         device: str = 'cuda',
-        batch_limit: int = 512, 
-        saveas: str = 'h5', 
+        batch_limit: int = 512,
+        saveas: str = 'h5',
         saveto: str | None = None
     ) -> None:
         """
@@ -537,7 +537,7 @@ class Processor:
 
         This function generates embeddings for WSIs by first ensuring that patch-level features
         required for the slide encoder are available. If patch features are missing, they are
-        extracted using an appropriate patch encoder automatically inferred. The extracted slide features are saved in 
+        extracted using an appropriate patch encoder automatically inferred. The extracted slide features are saved in
         the specified format and directory.
 
         Args:
@@ -552,7 +552,7 @@ class Processor:
                 directory is auto-generated based on `coords_dir` and `slide_encoder`. Defaults to None.
 
         Returns:
-            str: The absolute path to where the slide embeddings are saved. 
+            str: The absolute path to where the slide embeddings are saved.
 
         Workflow:
             1. Verify the compatibility of the slide encoder and patch features.
@@ -573,7 +573,7 @@ class Processor:
 
         """
         from trident.slide_encoder_models.load import slide_to_patch_encoder_name
-        
+
         if slide_encoder.enc_name.startswith('mean-'):
             slide_to_patch_encoder_name[slide_encoder.enc_name] = slide_encoder.enc_name.split('mean-')[1] # e.g. mean-resnet18 -> resnet18
 
@@ -654,7 +654,7 @@ class Processor:
                     continue
                 else:
                     raise e
-        
+
         return os.path.join(self.job_dir, saveto)
 
     def save_config(
@@ -664,23 +664,23 @@ class Processor:
         ignore: List[str] = ['valid_slides']
     ) -> None:
         """
-        The `save_config` function saves the current configuration of the `Processor` instance to a JSON file. 
-        This configuration includes attributes of the instance as well as optional additional parameters 
+        The `save_config` function saves the current configuration of the `Processor` instance to a JSON file.
+        This configuration includes attributes of the instance as well as optional additional parameters
         provided via the `local_attrs` argument.
 
-        The function filters out attributes specified in the `ignore` list and ensures that only JSON-serializable 
-        attributes are included. This makes it ideal for saving configurations in a structured format that can 
+        The function filters out attributes specified in the `ignore` list and ensures that only JSON-serializable
+        attributes are included. This makes it ideal for saving configurations in a structured format that can
         later be reloaded or inspected for reproducibility.
 
         Parameters:
-            saveto (str): 
-                The path to the file where the configuration will be saved. This should include the file extension 
+            saveto (str):
+                The path to the file where the configuration will be saved. This should include the file extension
                 (e.g., "config.json").
-            local_attrs (dict, optional): 
-                A dictionary of additional attributes to include in the configuration. This can be used to add 
+            local_attrs (dict, optional):
+                A dictionary of additional attributes to include in the configuration. This can be used to add
                 method-specific parameters or runtime settings. Defaults to None.
-            ignore (list, optional): 
-                A list of attribute names to exclude from the configuration. This is useful for omitting large 
+            ignore (list, optional):
+                A list of attribute names to exclude from the configuration. This is useful for omitting large
                 or non-serializable objects. Defaults to ['valid_slides'].
 
         Returns:
