@@ -12,6 +12,7 @@ dependencies:
   - matplotlib
   - segmentation-models-pytorch
   - opencv
+  - openslide
   - openslide-python
   - pillow
   - timm=0.9.16
@@ -22,4 +23,3 @@ dependencies:
   - pip:
       - einops_exts
       - pyisyntax
-      - openslide-bin
