@@ -8,6 +8,8 @@ import geopandas as gpd
 from shapely import Polygon
 from PIL import Image
 
+from trident.IO import read_coords_legacy
+
 class WSIPatcher:
     """ Iterator class to handle patching, patch scaling and tissue mask intersection """
 
@@ -56,13 +58,17 @@ class WSIPatcher:
         # set src magnification and pixel size.
         if src_pixel_size is not None:
             self.src_pixel_size = src_pixel_size
-        else:
+        elif src_mag is not None:
             self.src_pixel_size = 10 / src_mag
+        else:
+            raise ValueError("Either `src_pixel_size` or `src_mag` must be different than None in WSIPatcher.")
 
         if dst_pixel_size is not None:
             self.dst_pixel_size = dst_pixel_size
-        else:
+        elif dst_mag is not None:
             self.dst_pixel_size = 10 / dst_mag
+        else:
+            self.dst_pixel_size = self.src_pixel_size
 
         self.downsample = self.dst_pixel_size / self.src_pixel_size
         self.patch_size_src = round(patch_size * self.downsample)
@@ -301,11 +307,13 @@ class WSIPatcher:
             canvas[:text_area_height, :300] * 0.5
         ).astype(np.uint8)
 
+        patch_mpp_mag = f"{self.dst_mag}x" if self.dst_mag is not None else f"{self.dst_pixel_size}um/px"
+
         cv2.putText(canvas, f'{len(self)} patches', (text_x_offset, text_y_spacing), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
         cv2.putText(canvas, f'width={self.width}, height={self.height}', (text_x_offset, text_y_spacing * 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
         cv2.putText(canvas, f'mpp={self.wsi.mpp}, mag={self.wsi.mag}', (text_x_offset, text_y_spacing * 3), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(canvas, f'patch={self.patch_size_target} w. overlap={self.overlap} @ {self.dst_mag}x', (text_x_offset, text_y_spacing * 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(canvas, f'patch={self.patch_size_target} w. overlap={self.overlap} @ {patch_mpp_mag}', (text_x_offset, text_y_spacing * 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
         return Image.fromarray(canvas)
 
