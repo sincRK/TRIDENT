@@ -5,8 +5,6 @@ from PIL import Image
 import os
 import warnings
 import torch
-from typing import List, Tuple, Optional, Literal
-import torch
 from typing import List, Tuple, Optional, Literal, Union
 from torch.utils.data import DataLoader
 from tqdm import tqdm
