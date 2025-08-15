@@ -392,7 +392,6 @@ class WSI:
         --------
         Union[str, gpd.GeoDataFrame]:
             The absolute path to where the segmentation as GeoJSON is saved if `job_dir` is not None, else, a GeoDataFrame object.
-
         Example:
         --------
         >>> wsi.segment_tissue(segmentation_model, target_mag=10, job_dir="output_dir")
@@ -422,7 +421,11 @@ class WSI:
             num_workers,
             None
         )
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> hand wise overwritting of rebasing mixup
         # Post-process the mask
         predicted_mask = (predicted_mask > 0).astype(np.uint8) * 255
 
@@ -676,11 +679,8 @@ class WSI:
 
         os.makedirs(os.path.join(save_coords, 'patches'), exist_ok=True)
         out_fname = os.path.join(save_coords, 'patches', str(self.name) + '_patches.h5')
-        save_h5(out_fname,
-                assets = assets,
-                attributes = {'coords': attributes},
-                mode='w')
-
+        coords_to_h5(coords_to_keep, out_fname, patch_size, self.mag, target_mag,
+                     save_coords, self.width, self.height, self.name, overlap)
         return out_fname
 
     def visualize_coords(self, coords_path: str, save_patch_viz: str) -> str:
