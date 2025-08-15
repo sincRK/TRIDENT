@@ -1,6 +1,5 @@
 from __future__ import annotations
 from abc import abstractmethod
-from abc import abstractmethod
 import numpy as np
 from PIL import Image
 import os
@@ -11,12 +10,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from trident.segmentation_models.load import SegmentationModel
-from trident.segmentation_models.load import SegmentationModel
 from trident.wsi_objects.WSIPatcher import *
 from trident.wsi_objects.WSIPatcherDataset import WSIPatcherDataset
 from trident.IO import (
-    save_h5, read_coords,
-    mask_to_gdf, overlay_gdf_on_thumbnail, get_num_workers, coords_to_h5
     save_h5, read_coords,
     mask_to_gdf, overlay_gdf_on_thumbnail, get_num_workers, coords_to_h5
 )
@@ -359,16 +355,14 @@ class WSI:
     def segment_tissue(
         self,
         segmentation_model: SegmentationModel,
-        segmentation_model: SegmentationModel,
         target_mag: int = 10,
         holes_are_tissue: bool = True,
         job_dir: Optional[str] = None,
         batch_size: int = 16,
         device: str = 'cuda:0',
         verbose=False,
-        num_workers=None,
         num_workers=None
-    ) -> Union[Union[str, gpd.GeoDataFrame], gpd.GeoDataFrame]:
+    ) -> Union[str, gpd.GeoDataFrame]:
         """
         The `segment_tissue` function of the class `WSI` segments tissue regions in the WSI using
         a specified segmentation model. It processes the WSI at a target magnification level, optionally
@@ -377,14 +371,13 @@ class WSI:
         Args:
         -----
         segmentation_model : SegmentationModel
-        segmentation_model : SegmentationModel
             The model used for tissue segmentation.
         target_mag : int, optional
             Target magnification level for segmentation. Defaults to 10.
         holes_are_tissue : bool, optional
             Whether to treat holes in the mask as tissue. Defaults to True.
         job_dir :  Optional[str], optional
-            Directory to save the segmentation results, if None, this method directly returns the contours as a GeoDataframe without saving files, if None, this method directly returns the contours as a GeoDataframe without saving files. Defaults to None.
+            Directory to save the segmentation results, if None, this method directly returns the contours as a GeoDataframe without saving files. Defaults to None.
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
         device (str):
@@ -397,8 +390,8 @@ class WSI:
 
         Returns:
         --------
-        str:
-            The absolute path to where the segmentation as GeoJSON is saved.
+        Union[str, gpd.GeoDataFrame]:
+            The absolute path to where the segmentation as GeoJSON is saved if `job_dir` is not None, else, a GeoDataFrame object.
 
         Example:
         --------
@@ -429,6 +422,9 @@ class WSI:
             num_workers,
             None
         )
+
+        # Post-process the mask
+        predicted_mask = (predicted_mask > 0).astype(np.uint8) * 255
 
         # # Fill holes if desired
         # if not holes_are_tissue:
@@ -680,11 +676,8 @@ class WSI:
 
         os.makedirs(os.path.join(save_coords, 'patches'), exist_ok=True)
         out_fname = os.path.join(save_coords, 'patches', str(self.name) + '_patches.h5')
-        save_h5(out_fname,
-                assets = assets,
-                attributes = {'coords': attributes},
-                mode='w')
-
+        coords_to_h5(coords_to_keep, out_fname, patch_size, self.mag, target_mag,
+                     save_coords, self.width, self.height, self.name, overlap)
         return out_fname
 
     def visualize_coords(self, coords_path: str, save_patch_viz: str) -> str:
