@@ -1,22 +1,18 @@
 from __future__ import annotations
 from abc import abstractmethod
-from abc import abstractmethod
 import numpy as np
 from PIL import Image
-import os
+import os 
 import warnings
-import torch
+import torch 
 from typing import List, Tuple, Optional, Literal, Union
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from trident.segmentation_models.load import SegmentationModel
-from trident.segmentation_models.load import SegmentationModel
 from trident.wsi_objects.WSIPatcher import *
 from trident.wsi_objects.WSIPatcherDataset import WSIPatcherDataset
 from trident.IO import (
-    save_h5, read_coords,
-    mask_to_gdf, overlay_gdf_on_thumbnail, get_num_workers, coords_to_h5
     save_h5, read_coords,
     mask_to_gdf, overlay_gdf_on_thumbnail, get_num_workers, coords_to_h5
 )
@@ -26,9 +22,9 @@ ReadMode = Literal['pil', 'numpy']
 
 class WSI:
     """
-    The `WSI` class provides an interface to work with Whole Slide Images (WSIs).
+    The `WSI` class provides an interface to work with Whole Slide Images (WSIs). 
     It supports lazy initialization, metadata extraction, tissue segmentation,
-    patching, and feature extraction. The class handles various WSI file formats and
+    patching, and feature extraction. The class handles various WSI file formats and 
     offers utilities for integration with AI models.
 
     Attributes
@@ -99,21 +95,21 @@ class WSI:
         """
         self.slide_path = slide_path
         if name is None:
-            self.name, self.ext = os.path.splitext(os.path.basename(slide_path))
+            self.name, self.ext = os.path.splitext(os.path.basename(slide_path)) 
         else:
             self.name, self.ext = os.path.splitext(name)
         self.tissue_seg_path = tissue_seg_path
         self.custom_mpp_keys = custom_mpp_keys
 
         self.width, self.height = None, None  # Placeholder dimensions
-        self.mpp = mpp  # Placeholder microns per pixel. Defaults will be None unless specified in constructor.
+        self.mpp = mpp  # Placeholder microns per pixel. Defaults will be None unless specified in constructor. 
         self.mag = None  # Placeholder magnification
         self.lazy_init = lazy_init  # Initialize immediately if lazy_init is False
         self.max_workers = max_workers
 
         if not self.lazy_init:
             self._lazy_initialize()
-        else:
+        else: 
             self.lazy_init = not self.lazy_init
 
     def __repr__(self) -> str:
@@ -121,7 +117,7 @@ class WSI:
             return f"<width={self.width}, height={self.height}, backend={self.__class__.__name__}, mpp={self.mpp}, mag={self.mag}>"
         else:
             return f"<name={self.name}>"
-
+    
     def _lazy_initialize(self) -> None:
         """
         Perform lazy initialization of internal attributes for the WSI interface.
@@ -160,15 +156,15 @@ class WSI:
                     raise FileNotFoundError(f"Tissue segmentation file not found: {self.tissue_seg_path}")
 
     def create_patcher(
-        self,
-        patch_size: int,
-        src_pixel_size: Optional[float] = None,
-        dst_pixel_size: Optional[float] = None,
-        src_mag: Optional[int] = None,
-        dst_mag: Optional[int] = None,
-        overlap: int = 0,
+        self, 
+        patch_size: int, 
+        src_pixel_size: Optional[float] = None, 
+        dst_pixel_size: Optional[float] = None, 
+        src_mag: Optional[int] = None, 
+        dst_mag: Optional[int] = None, 
+        overlap: int = 0, 
         mask: Optional[gpd.GeoDataFrame] = None,
-        coords_only: bool = False,
+        coords_only: bool = False, 
         custom_coords:  Optional[np.ndarray] = None,
         threshold: float = 0.15,
         pil: bool = False,
@@ -201,12 +197,12 @@ class WSI:
             self, patch_size, src_pixel_size, dst_pixel_size, src_mag, dst_mag,
             overlap, mask, coords_only, custom_coords, threshold, pil
         )
-
+    
     def _fetch_magnification(self, custom_mpp_keys: Optional[List[str]] = None) -> int:
         """
-        The `_fetch_magnification` function of the class `WSI` calculates the magnification level
-        of the WSI based on the microns per pixel (MPP) value or other metadata. The magnification levels are
-        approximated to commonly used values such as 80x, 40x, 20x, etc. If the MPP is unavailable or insufficient
+        The `_fetch_magnification` function of the class `WSI` calculates the magnification level 
+        of the WSI based on the microns per pixel (MPP) value or other metadata. The magnification levels are 
+        approximated to commonly used values such as 80x, 40x, 20x, etc. If the MPP is unavailable or insufficient 
         for calculation, it attempts to fallback to metadata-based values.
 
         Args:
@@ -252,9 +248,9 @@ class WSI:
                 raise ValueError(f"Identified mpp is very low: mpp={mpp_x}. Most WSIs are at 20x, 40x magnfication.")
 
     def _segment_semantic(
-        self,
+        self, 
         segmentation_model: SegmentationModel,
-        target_mag: int,
+        target_mag: int, 
         verbose: bool,
         device: str,
         batch_size: int,
@@ -263,8 +259,8 @@ class WSI:
         inference_fn
     ):
         """
-
-        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using
+        
+        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using 
         a specified segmentation model.
 
         Args:
@@ -275,7 +271,7 @@ class WSI:
             perform segmentation at this magnification
         verbose: bool, optional:
             Whenever to print segmentation progress. Defaults to False.
-        device (str):
+        device (str): 
             The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
@@ -306,10 +302,10 @@ class WSI:
         eval_transforms = segmentation_model.eval_transforms
         dataset = WSIPatcherDataset(patcher, eval_transforms)
         dataloader = DataLoader(
-            dataset,
-            batch_size=batch_size,
+            dataset, 
+            batch_size=batch_size, 
             collate_fn=collate_fn,
-            num_workers=get_num_workers(batch_size, max_workers=self.max_workers) if num_workers is None else num_workers,
+            num_workers=get_num_workers(batch_size, max_workers=self.max_workers) if num_workers is None else num_workers, 
             pin_memory=True
         )
 
@@ -344,7 +340,7 @@ class WSI:
             y_starts = np.clip(np.round(ycoords.numpy() * mpp_reduction_factor).astype(int), 0, height - 1)
             x_ends = np.clip(x_starts + segmentation_model.input_size, 0, width)
             y_ends = np.clip(y_starts + segmentation_model.input_size, 0, height)
-
+            
             for i in range(len(preds)):
                 x_start, x_end = x_starts[i], x_ends[i]
                 y_start, y_end = y_starts[i], y_ends[i]
@@ -359,24 +355,21 @@ class WSI:
     def segment_tissue(
         self,
         segmentation_model: SegmentationModel,
-        segmentation_model: SegmentationModel,
         target_mag: int = 10,
         holes_are_tissue: bool = True,
         job_dir: Optional[str] = None,
         batch_size: int = 16,
         device: str = 'cuda:0',
         verbose=False,
-        num_workers=None,
         num_workers=None
-    ) -> Union[Union[str, gpd.GeoDataFrame], gpd.GeoDataFrame]:
+    ) -> Union[str, gpd.GeoDataFrame]:
         """
-        The `segment_tissue` function of the class `WSI` segments tissue regions in the WSI using
-        a specified segmentation model. It processes the WSI at a target magnification level, optionally
+        The `segment_tissue` function of the class `WSI` segments tissue regions in the WSI using 
+        a specified segmentation model. It processes the WSI at a target magnification level, optionally 
         treating holes in the mask as tissue. The segmented regions are saved as thumbnails and GeoJSON contours.
 
         Args:
         -----
-        segmentation_model : SegmentationModel
         segmentation_model : SegmentationModel
             The model used for tissue segmentation.
         target_mag : int, optional
@@ -384,10 +377,10 @@ class WSI:
         holes_are_tissue : bool, optional
             Whether to treat holes in the mask as tissue. Defaults to True.
         job_dir :  Optional[str], optional
-            Directory to save the segmentation results, if None, this method directly returns the contours as a GeoDataframe without saving files, if None, this method directly returns the contours as a GeoDataframe without saving files. Defaults to None.
+            Directory to save the segmentation results, if None, this method directly returns the contours as a GeoDataframe without saving files. Defaults to None.
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
-        device (str):
+        device (str): 
             The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
         verbose: bool, optional:
             Whenever to print segmentation progress. Defaults to False.
@@ -397,9 +390,9 @@ class WSI:
 
         Returns:
         --------
-        str:
-            The absolute path to where the segmentation as GeoJSON is saved.
-
+        Union[str, gpd.GeoDataFrame]:
+            The absolute path to where the segmentation as GeoJSON is saved if `job_dir` is not None, else, a GeoDataFrame object.
+            
         Example:
         --------
         >>> wsi.segment_tissue(segmentation_model, target_mag=10, job_dir="output_dir")
@@ -428,7 +421,10 @@ class WSI:
             None,
             num_workers,
             None
-        )        
+        )
+        
+        # Post-process the mask
+        predicted_mask = (predicted_mask > 0).astype(np.uint8) * 255
 
         # # Fill holes if desired
         # if not holes_are_tissue:
@@ -482,7 +478,7 @@ class WSI:
         return_contours=False
     ) -> Union[Tuple[np.ndarray, float], Tuple[np.ndarray, float, gpd.GeoDataFrame]]:
         """
-        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using
+        The `segment_semantic` function of the class `WSI` segments semantic regions in the WSI using 
         a specified segmentation model.
 
         Args:
@@ -493,7 +489,7 @@ class WSI:
             Target magnification level for segmentation. Defaults to 10.
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
-        device (str):
+        device (str): 
             The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
         verbose: bool, optional:
             Whenever to print segmentation progress. Defaults to False.
@@ -508,13 +504,13 @@ class WSI:
             this function must return a tensor with shape: (B, H, W) and dtype uint8
         return_contours: bool, optional
             Whenever to return the contours of each class in a GeoDataframe. Defaults to False
-
+            
 
         Returns:
         --------
         Union[Tuple[np.ndarray, float], Tuple[np.ndarray, float, gpd.GeoDataFrame]]:
             a downscaled H x W np.ndarray containing class predictions and its downscale factor. Also returns the contours of each class in a GeoDataframe if return_contours is provided.
-
+            
         Example:
         --------
         >>> wsi.segment_tissue(segmentation_model, target_mag=10, job_dir="output_dir")
@@ -554,14 +550,14 @@ class WSI:
                 contour_scale=1/mpp_reduction_factor
             )
             gdfs.append(gdf_contours)
-
+        
         if len(gdfs) > 0:
             gdf = pd.concat(gdfs)
         else:
             gdf = gpd.GeoDataFrame()
 
         return predicted_mask, mpp_reduction_factor, gdf
-
+        
 
     def get_best_level_and_custom_downsample(
         self,
@@ -569,8 +565,8 @@ class WSI:
         tolerance: float = 0.01
     ) -> Tuple[int, float]:
         """
-        The `get_best_level_and_custom_downsample` function of the class `WSI` determines the best level
-        and custom downsample factor to approximate a desired downsample value. It identifies the most suitable
+        The `get_best_level_and_custom_downsample` function of the class `WSI` determines the best level 
+        and custom downsample factor to approximate a desired downsample value. It identifies the most suitable 
         resolution level of the WSI and calculates any additional scaling required.
 
         Args:
@@ -635,8 +631,8 @@ class WSI:
         min_tissue_proportion: float  = 0.,
     ) -> str:
         """
-        The `extract_tissue_coords` function of the class `WSI` extracts patch coordinates
-        from tissue regions in the WSI. It generates coordinates of patches at the specified
+        The `extract_tissue_coords` function of the class `WSI` extracts patch coordinates 
+        from tissue regions in the WSI. It generates coordinates of patches at the specified 
         magnification and saves the results in an HDF5 file.
 
         Args:
@@ -649,8 +645,8 @@ class WSI:
             Directory path to save the extracted coordinates.
         overlap : int, optional
             Overlap between patches in pixels. Defaults to 0.
-        min_tissue_proportion: float, optional
-            Minimum proportion of the patch under tissue to be kept. Defaults to 0.
+        min_tissue_proportion: float, optional 
+            Minimum proportion of the patch under tissue to be kept. Defaults to 0. 
 
         Returns:
         --------
@@ -680,17 +676,14 @@ class WSI:
 
         os.makedirs(os.path.join(save_coords, 'patches'), exist_ok=True)
         out_fname = os.path.join(save_coords, 'patches', str(self.name) + '_patches.h5')
-        save_h5(out_fname,
-                assets = assets,
-                attributes = {'coords': attributes},
-                mode='w')
-
+        coords_to_h5(coords_to_keep, out_fname, patch_size, self.mag, target_mag,
+                     save_coords, self.width, self.height, self.name, overlap)
         return out_fname
 
     def visualize_coords(self, coords_path: str, save_patch_viz: str) -> str:
         """
-        The `visualize_coords` function of the class `WSI` overlays patch coordinates
-        onto a scaled thumbnail of the WSI. It creates a visualization of the extracted patches
+        The `visualize_coords` function of the class `WSI` overlays patch coordinates 
+        onto a scaled thumbnail of the WSI. It creates a visualization of the extracted patches 
         and saves it as an image file.
 
         Args:
@@ -720,14 +713,14 @@ class WSI:
             level0_magnification = coords_attrs.get('level0_magnification', None)
             target_magnification = coords_attrs.get('target_magnification', None)
             overlap = coords_attrs.get('overlap', 'NA')
-
+            
             if None in (patch_size, level0_magnification, target_magnification):
                 raise KeyError('Missing essential attributes in coords_attrs.')
 
         except (KeyError, FileNotFoundError, ValueError) as e:
             warnings.warn(f"Cannot read using Trident coords format ({str(e)}). Trying with CLAM/Fishing-Rod.")
             patcher = WSIPatcher.from_legacy_coords_file(self, coords_path, coords_only=True)
-
+        
         else:
             patcher = self.create_patcher(
                 patch_size=patch_size,
@@ -757,8 +750,8 @@ class WSI:
         verbose: bool = False
     ) -> str:
         """
-        The `extract_patch_features` function of the class `WSI` extracts feature embeddings
-        from the WSI using a specified patch encoder. It processes the patches as specified
+        The `extract_patch_features` function of the class `WSI` extracts feature embeddings 
+        from the WSI using a specified patch encoder. It processes the patches as specified 
         in the coordinates file and saves the features in the desired format.
 
         Args:
@@ -800,9 +793,9 @@ class WSI:
             coords_attrs, coords = read_coords(coords_path)
             patch_size = coords_attrs.get('patch_size', None)
             level0_magnification = coords_attrs.get('level0_magnification', None)
-            target_magnification = coords_attrs.get('target_magnification', None)
+            target_magnification = coords_attrs.get('target_magnification', None)            
             if None in (patch_size, level0_magnification, target_magnification):
-                raise KeyError('Missing attributes in coords_attrs.')
+                raise KeyError('Missing attributes in coords_attrs.')         
 
         except (KeyError, FileNotFoundError, ValueError) as e:
             warnings.warn(f"Cannot read using Trident coords format ({str(e)}). Trying with CLAM/Fishing-Rod.")
@@ -816,7 +809,7 @@ class WSI:
                 custom_coords=coords,
                 coords_only=False,
                 pil=True,
-            )
+            )  
 
 
         dataset = WSIPatcherDataset(patcher, patch_transforms)
@@ -828,7 +821,7 @@ class WSI:
         for imgs, _ in dataloader:
             imgs = imgs.to(device)
             with torch.autocast(device_type='cuda', dtype=precision, enabled=(precision != torch.float32)):
-                batch_features = patch_encoder(imgs)
+                batch_features = patch_encoder(imgs)  
             features.append(batch_features.cpu().numpy())
 
         # Concatenate features
@@ -910,7 +903,7 @@ class WSI:
         # Set the slide encoder model to device and eval
         slide_encoder.to(device)
         slide_encoder.eval()
-
+        
         # Load patch-level features from h5 file
         with h5py.File(patch_features_path, 'r') as f:
             coords = f['coords'][:]
