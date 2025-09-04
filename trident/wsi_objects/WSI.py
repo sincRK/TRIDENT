@@ -421,11 +421,6 @@ class WSI:
             num_workers,
             None
         )
-<<<<<<< HEAD
-
-=======
-
->>>>>>> hand wise overwritting of rebasing mixup
         # Post-process the mask
         predicted_mask = (predicted_mask > 0).astype(np.uint8) * 255
 
