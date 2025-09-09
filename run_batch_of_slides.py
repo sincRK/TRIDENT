@@ -10,7 +10,7 @@ import os
 import argparse
 import torch
 
-from trident import Processor 
+from trident import Processor
 from trident.patch_encoder_models import encoder_registry as patch_encoder_registry
 from trident.slide_encoder_models import encoder_registry as slide_encoder_registry
 
@@ -21,16 +21,16 @@ def build_parser():
     """
     parser = argparse.ArgumentParser(description='Run Trident')
 
-    # Generic arguments 
+    # Generic arguments
     parser.add_argument('--gpu', type=int, default=0, help='GPU index to use for processing tasks.')
-    parser.add_argument('--task', type=str, default='seg', 
-                        choices=['seg', 'coords', 'feat', 'all'], 
+    parser.add_argument('--task', type=str, default='seg',
+                        choices=['seg', 'coords', 'feat', 'all'],
                         help='Task to run: seg (segmentation), coords (save tissue coordinates), img (save tissue images), feat (extract features).')
     parser.add_argument('--job_dir', type=str, required=True, help='Directory to store outputs.')
-    parser.add_argument('--skip_errors', action='store_true', default=False, 
+    parser.add_argument('--skip_errors', action='store_true', default=False,
                         help='Skip errored slides and continue processing.')
     parser.add_argument('--max_workers', type=int, default=None, help='Maximum number of workers. Set to 0 to use main process.')
-    parser.add_argument('--batch_size', type=int, default=64, 
+    parser.add_argument('--batch_size', type=int, default=64,
                         help="Batch size used for segmentation and feature extraction. Will be override by"
                         "`seg_batch_size` and `feat_batch_size` if you want to use different ones. Defaults to 64.")
 
@@ -45,9 +45,9 @@ def build_parser():
     )
 
     # Slide-related arguments
-    parser.add_argument('--wsi_dir', type=str, required=True, 
+    parser.add_argument('--wsi_dir', type=str, required=True,
                         help='Directory containing WSI files (no nesting allowed).')
-    parser.add_argument('--wsi_ext', type=str, nargs='+', default=None, 
+    parser.add_argument('--wsi_ext', type=str, nargs='+', default=None,
                         help='List of allowed file extensions for WSI files.')
     parser.add_argument('--custom_mpp_keys', type=str, nargs='+', default=None,
                     help='Custom keys used to store the resolution as MPP (micron per pixel) in your list of whole-slide image.')
@@ -60,35 +60,35 @@ def build_parser():
                               "`wsi_source`. Uses `os.walk` to include slides from nested folders. "
                               "This allows processing of datasets organized in hierarchical structures. "
                               "Defaults to False (only top-level slides are included)."))
-    # Segmentation arguments 
-    parser.add_argument('--segmenter', type=str, default='hest', 
-                        choices=['hest', 'grandqc'], 
+    # Segmentation arguments
+    parser.add_argument('--segmenter', type=str, default='hest',
+                        choices=['hest', 'grandqc'],
                         help='Type of tissue vs background segmenter. Options are HEST or GrandQC.')
-    parser.add_argument('--seg_conf_thresh', type=float, default=0.5, 
+    parser.add_argument('--seg_conf_thresh', type=float, default=0.5,
                     help='Confidence threshold to apply to binarize segmentation predictions. Lower this threhsold to retain more tissue. Defaults to 0.5. Try 0.4 as 2nd option.')
-    parser.add_argument('--remove_holes', action='store_true', default=False, 
+    parser.add_argument('--remove_holes', action='store_true', default=False,
                         help='Do you want to remove holes?')
-    parser.add_argument('--remove_artifacts', action='store_true', default=False, 
+    parser.add_argument('--remove_artifacts', action='store_true', default=False,
                         help='Do you want to run an additional model to remove artifacts (including penmarks, blurs, stains, etc.)?')
-    parser.add_argument('--remove_penmarks', action='store_true', default=False, 
+    parser.add_argument('--remove_penmarks', action='store_true', default=False,
                         help='Do you want to run an additional model to remove penmarks?')
-    parser.add_argument('--seg_batch_size', type=int, default=None, 
+    parser.add_argument('--seg_batch_size', type=int, default=None,
                         help='Batch size for segmentation. Defaults to None (use `batch_size` argument instead).')
-    
+
     # Patching arguments
-    parser.add_argument('--mag', type=int, choices=[5, 10, 20, 40, 80], default=20, 
+    parser.add_argument('--mag', type=int, choices=[5, 10, 20, 40, 80], default=20,
                         help='Magnification for coords/features extraction.')
-    parser.add_argument('--patch_size', type=int, default=512, 
+    parser.add_argument('--patch_size', type=int, default=512,
                         help='Patch size for coords/image extraction.')
-    parser.add_argument('--overlap', type=int, default=0, 
+    parser.add_argument('--overlap', type=int, default=0,
                         help='Absolute overlap for patching in pixels. Defaults to 0.')
-    parser.add_argument('--min_tissue_proportion', type=float, default=0., 
+    parser.add_argument('--min_tissue_proportion', type=float, default=0.,
                         help='Minimum proportion of the patch under tissue to be kept. Between 0. and 1.0. Defaults to 0.')
-    parser.add_argument('--coords_dir', type=str, default=None, 
+    parser.add_argument('--coords_dir', type=str, default=None,
                         help='Directory to save/restore tissue coordinates.')
-    
-    # Feature extraction arguments 
-    parser.add_argument('--patch_encoder', type=str, default='conch_v15', 
+
+    # Feature extraction arguments
+    parser.add_argument('--patch_encoder', type=str, default='conch_v15',
                         choices=patch_encoder_registry.keys(),
                         help='Patch encoder to use')
     parser.add_argument(
@@ -101,11 +101,13 @@ def build_parser():
             "`./trident/patch_encoder_models/local_ckpts.json`."
         )
     )
-    parser.add_argument('--slide_encoder', type=str, default=None, 
-                        choices=slide_encoder_registry.keys(), 
+    parser.add_argument('--slide_encoder', type=str, default=None,
+                        choices=slide_encoder_registry.keys(),
                         help='Slide encoder to use')
-    parser.add_argument('--feat_batch_size', type=int, default=None, 
+    parser.add_argument('--feat_batch_size', type=int, default=None,
                         help='Batch size for feature extraction. Defaults to None (use `batch_size` argument instead).')
+    parser.add_argument('--max_queue_size', type=int, default=1,
+                        help='Maximum number of pre-fetched patches to keep in RAM for feature extraction. Helps speed up processing at the cost of higher RAM usage. Defaults to 1.')
     return parser
 
 
@@ -116,7 +118,7 @@ def parse_arguments():
 def generate_help_text() -> str:
     """
     Generate the command-line help text for documentation purposes.
-    
+
     Returns:
         str: The full help message string from the argument parser.
     """
@@ -163,7 +165,7 @@ def run_task(processor, args):
         else:
             artifact_remover_model = None
 
-        # run segmentation 
+        # run segmentation
         processor.run_segmentation_job(
             segmentation_model,
             seg_mag=segmentation_model.target_mag,
@@ -181,7 +183,7 @@ def run_task(processor, args):
             min_tissue_proportion=args.min_tissue_proportion
         )
     elif args.task == 'feat':
-        if args.slide_encoder is None: 
+        if args.slide_encoder is None:
             from trident.patch_encoder_models.load import encoder_factory
             encoder = encoder_factory(args.patch_encoder, weights_path=args.patch_encoder_ckpt_path)
             processor.run_patch_feature_extraction_job(
@@ -219,7 +221,7 @@ def main():
         from trident.Concurrency import batch_producer, batch_consumer, cache_batch
         from trident.IO import collect_valid_slides
 
-        queue = Queue(maxsize=1)
+        queue = Queue(args.max_queue_size)
         valid_slides = collect_valid_slides(
             wsi_dir=args.wsi_dir,
             custom_list_path=args.custom_list_of_wsis,
