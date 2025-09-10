@@ -51,12 +51,13 @@ slide_to_patch_encoder_name = {
 
 class BaseSlideEncoder(torch.nn.Module):
     
-    def __init__(self, freeze: bool = True, **build_kwargs: dict) -> None:
+    def __init__(self, freeze: bool = True, weights_path: Optional[str] = None, **build_kwargs: dict) -> None:
         """
         Parent class for all pretrained slide encoders.
         """
         super().__init__()
         self.enc_name = None
+        self.weights_path: Optional[str] = weights_path
         self.model, self.precision, self.embedding_dim = self._build(**build_kwargs)
 
         # Set all parameters to be non-trainable
@@ -64,6 +65,25 @@ class BaseSlideEncoder(torch.nn.Module):
             for param in self.model.parameters():
                 param.requires_grad = False
             self.model.eval()
+            
+    def ensure_valid_weights_path(self, weights_path):
+        if weights_path and not os.path.isfile(weights_path):
+            raise FileNotFoundError(f"Expected checkpoint at '{weights_path}', but the file was not found.")
+        
+    def _get_weights_path(self):
+        """
+        If self.weights_path is provided, use it. 
+        If not provided, check the model registry. 
+            If path in model registry is empty, auto-download from huggingface
+            else, use the path from the registry.
+        """
+        if self.weights_path:
+            self.ensure_valid_weights_path(self.weights_path)
+            return self.weights_path
+        else:
+            weights_path = get_weights_path('slide', self.enc_name)
+            self.ensure_valid_weights_path(weights_path)
+            return weights_path
         
     def forward(self, batch):
         """
@@ -430,17 +450,28 @@ class FeatherSlideEncoder(BaseSlideEncoder):
 
     def _build(self, pretrained=True):
         self.enc_name = 'feather'
+        
+        weights_path = self._get_weights_path()
 
         assert pretrained, "FeatherSlideEncoder has no non-pretrained models. Please load with pretrained=True."
         from transformers import AutoModel 
         from huggingface_hub import snapshot_download
 
-        model_path = snapshot_download(
-            repo_id="MahmoodLab/abmil.base.conch_v15.pc108-24k",
-            revision="main",
-            allow_patterns=["*.py", "model.safetensors", "config.json"]
-        )
-        model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
+        if weights_path:
+            weights_path = os.path.dirname(weights_path)  # Use directory containing the weights
+            model = AutoModel.from_pretrained(weights_path, trust_remote_code=True, local_files_only=True)
+        else:
+            try:
+                model_path = snapshot_download(
+                    repo_id="MahmoodLab/abmil.base.conch_v15.pc108-24k",
+                    revision="main",
+                    allow_patterns=["*.py", "model.safetensors", "config.json"]
+                )
+                model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
+            except:
+                traceback.print_exc()
+                raise Exception("Failed to download Feather model, make sure that you were granted access and that you correctly registered your token")
+        
         precision = torch.float32
         embedding_dim = 512
 
