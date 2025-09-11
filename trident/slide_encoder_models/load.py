@@ -50,7 +50,7 @@ slide_to_patch_encoder_name = {
 
 
 class BaseSlideEncoder(torch.nn.Module):
-    
+
     def __init__(self, freeze: bool = True, weights_path: Optional[str] = None, **build_kwargs: dict) -> None:
         """
         Parent class for all pretrained slide encoders.
@@ -65,15 +65,15 @@ class BaseSlideEncoder(torch.nn.Module):
             for param in self.model.parameters():
                 param.requires_grad = False
             self.model.eval()
-            
+
     def ensure_valid_weights_path(self, weights_path):
         if weights_path and not os.path.isfile(weights_path):
             raise FileNotFoundError(f"Expected checkpoint at '{weights_path}', but the file was not found.")
-        
+
     def _get_weights_path(self):
         """
-        If self.weights_path is provided, use it. 
-        If not provided, check the model registry. 
+        If self.weights_path is provided, use it.
+        If not provided, check the model registry.
             If path in model registry is empty, auto-download from huggingface
             else, use the path from the registry.
         """
@@ -84,14 +84,14 @@ class BaseSlideEncoder(torch.nn.Module):
             weights_path = get_weights_path('slide', self.enc_name)
             self.ensure_valid_weights_path(weights_path)
             return weights_path
-        
+
     def forward(self, batch):
         """
         Can be overwritten if model requires special forward pass.
         """
         z = self.model(batch)
         return z
-        
+
     @abstractmethod
     def _build(self, **build_kwargs):
         """
@@ -102,27 +102,27 @@ class BaseSlideEncoder(torch.nn.Module):
 
 class CustomSlideEncoder(BaseSlideEncoder):
     def __init__(
-        self, 
-        enc_name: str, 
-        model: torch.nn.Module, 
-        precision: torch.dtype = torch.float32, 
+        self,
+        enc_name: str,
+        model: torch.nn.Module,
+        precision: torch.dtype = torch.float32,
         embedding_dim: Optional[int] = None
     ):
         """
         CustomSlideEncoder initialization.
 
-        This class is used when the model and precision are pre-instantiated externally 
+        This class is used when the model and precision are pre-instantiated externally
         and should be injected directly into the encoder wrapper.
 
         Args:
-            enc_name (str): 
+            enc_name (str):
                 A unique name or identifier for the encoder.
-            model (torch.nn.Module): 
+            model (torch.nn.Module):
                 A PyTorch model instance to use for slide-level inference.
-            precision (torch.dtype, optional): 
+            precision (torch.dtype, optional):
                 The precision to use for inference (e.g., torch.float32, torch.float16).
-            embedding_dim (int, optional): 
-                The output embedding dimension. If not provided, will attempt to use 
+            embedding_dim (int, optional):
+                The output embedding dimension. If not provided, will attempt to use
                 `model.embedding_dim` if it exists.
         """
         super().__init__(freeze=False)  # Freezing should be handled externally
@@ -142,7 +142,7 @@ class ABMILSlideEncoder(BaseSlideEncoder):
         ABMIL initialization.
         """
         super().__init__(**build_kwargs)
-    
+
     def _build(
         self,
         input_feature_dim: int,
@@ -152,20 +152,20 @@ class ABMILSlideEncoder(BaseSlideEncoder):
         gated: bool,
         pretrained: bool = False
     ) -> Tuple[torch.nn.ModuleDict, torch.dtype, int]:
-        
+
         from trident.slide_encoder_models.model_zoo.reusable_blocks.ABMIL import ABMIL
         import torch.nn as nn
 
         self.enc_name = 'abmil'
-        
+
         assert pretrained is False, "ABMILSlideEncoder has no corresponding pretrained models. Please load with pretrained=False."
-                                
+
         pre_attention_layers = nn.Sequential(
             nn.Linear(input_feature_dim, input_feature_dim),
             nn.GELU(),
             nn.Dropout(0.1)
         )
-        
+
         image_pooler = ABMIL(
             n_heads=n_heads,
             feature_dim=input_feature_dim,
@@ -174,19 +174,19 @@ class ABMILSlideEncoder(BaseSlideEncoder):
             n_branches=1,
             gated=gated
         )
-        
+
         post_attention_layers = nn.Sequential(
             nn.Linear(input_feature_dim, input_feature_dim),
             nn.GELU(),
             nn.Dropout(0.1)
         )
-        
+
         model = nn.ModuleDict({
             'pre_attention_layers': pre_attention_layers,
             'image_pooler': image_pooler,
             'post_attention_layers': post_attention_layers
         })
-        
+
         precision = torch.float32
         embedding_dim = input_feature_dim
         return model, precision, embedding_dim
@@ -195,7 +195,7 @@ class ABMILSlideEncoder(BaseSlideEncoder):
         image_features = self.model['pre_attention_layers'](batch['features'].to(device))
         image_features, attn = self.model['image_pooler'](image_features) # Features shape: (b n_branches f), where n_branches = 1. Branching is not used in this implementation.
         image_features = rearrange(image_features, 'b 1 f -> b f')
-        image_features = self.model['post_attention_layers'](image_features)# Attention scores shape: (b r h n), where h is number of attention heads 
+        image_features = self.model['post_attention_layers'](image_features)# Attention scores shape: (b r h n), where h is number of attention heads
         if return_raw_attention:
             return image_features, attn
         return image_features
@@ -208,9 +208,9 @@ class PRISMSlideEncoder(BaseSlideEncoder):
         PRISM initialization.
         """
         super().__init__(**build_kwargs)
-    
+
     def _build(self, pretrained=True):
-        
+
         self.enc_name = 'prism'
 
         if sys.version_info < (3, 10):
@@ -235,14 +235,14 @@ class PRISMSlideEncoder(BaseSlideEncoder):
         precision = torch.float16
         embedding_dim = 1280
         return model, precision, embedding_dim
-    
+
     def forward(self, batch, device='cuda'):
         # input should be of shape (batch_size, tile_seq_len, tile_embed_dim)
         x = batch['features'].to(device)
         z = self.model.slide_representations(x)
-        z = z['image_embedding'] 
+        z = z['image_embedding']
         return z
-    
+
 
 class CHIEFSlideEncoder(BaseSlideEncoder):
 
@@ -253,7 +253,7 @@ class CHIEFSlideEncoder(BaseSlideEncoder):
         super().__init__(**build_kwargs)
 
     def _build(self, pretrained=True):
-        
+
         self.enc_name = 'chief'
         weights_path = get_weights_path('slide', self.enc_name)
 
@@ -308,20 +308,20 @@ class CHIEFSlideEncoder(BaseSlideEncoder):
         if pretrained:
             td = torch.load(os.path.join('model_weight', 'CHIEF_pretraining.pth'), map_location='cpu', weights_only=True)
             model.load_state_dict(td, strict=True)
-            
+
         # Return to original working directory
         os.chdir(current_wd)
-        
+
         precision = torch.float32
         embedding_dim = 768
         return model, precision, embedding_dim
-    
+
     def forward(self, batch, device='cuda'):
         x = batch['features'].squeeze(0).to(device)
         z = self.model(x, torch.tensor([0]))
         z = z['WSI_feature']  # Shape (1,768)
         return z
-    
+
 
 class GigaPathSlideEncoder(BaseSlideEncoder):
 
@@ -340,20 +340,20 @@ class GigaPathSlideEncoder(BaseSlideEncoder):
         except:
             traceback.print_exc()
             raise Exception("Please install fairscale and gigapath using `pip install fairscale git+https://github.com/prov-gigapath/prov-gigapath.git`.")
-        
+
         # Make sure flash_attn is correct version
         try:
             import flash_attn; assert flash_attn.__version__ == '2.5.8'
         except:
             traceback.print_exc()
             raise Exception("Please install flash_attn version 2.5.8 using `pip install flash_attn==2.5.8`.")
-        
+
         if pretrained:
             model = create_model("hf_hub:prov-gigapath/prov-gigapath", "gigapath_slide_enc12l768d", 1536, global_pool=True)
         else:
             model = create_model("", "gigapath_slide_enc12l768d", 1536, global_pool=True)
-        
-        
+
+
         precision = torch.float16
         embedding_dim = 768
         return model, precision, embedding_dim
@@ -384,12 +384,12 @@ class MadeleineSlideEncoder(BaseSlideEncoder):
             from madeleine.models.factory import create_model_from_pretrained
         except:
             traceback.print_exc()
-            raise Exception("Please install Madeleine using `pip install git+https://github.com/mahmoodlab/MADELEINE.git`")  
-        
+            raise Exception("Please install Madeleine using `pip install git+https://github.com/mahmoodlab/MADELEINE.git`")
+
         model, precision = create_model_from_pretrained(weights_path)
 
         return model, precision, embedding_dim
-    
+
     def forward(self, x, device='cuda'):
         z = self.model.encode_he(x['features'], device)
         return z
@@ -412,7 +412,7 @@ class ThreadsSlideEncoder(BaseSlideEncoder):
         except:
             traceback.print_exc()
             raise Exception("Coming Soon! Thanks for your patience.")
-        
+
         return None, None, None
 
     def forward(self, batch, device='cuda', return_raw_attention=False):
@@ -420,7 +420,7 @@ class ThreadsSlideEncoder(BaseSlideEncoder):
 
 
 class TitanSlideEncoder(BaseSlideEncoder):
-    
+
     def __init__(self, **build_kwargs):
         """
         Titan initialization.
@@ -429,32 +429,92 @@ class TitanSlideEncoder(BaseSlideEncoder):
 
     def _build(self, pretrained=True):
         self.enc_name = 'titan'
+
+        weights_path = self._get_weights_path()
+
         assert pretrained, "TitanSlideEncoder has no non-pretrained models. Please load with pretrained=True."
-        from transformers import AutoModel 
-        model = AutoModel.from_pretrained('MahmoodLab/TITAN', trust_remote_code=True)
+        from transformers import AutoModel
+
+        if weights_path:
+            # Transformers bug with relative imports from the mahmoodlab/TITAN repo,
+            # similar to https://github.com/huggingface/transformers/issues/29251
+            # Also the conch_tokenizer.py trys to access the huggingface repo which
+            # requires login as of Sept 2025. Local lookup has to be implemented manually.
+            import tempfile
+            import shutil
+            from pathlib import Path
+
+            # Create a proper Python package in a temporary location
+            temp_dir = tempfile.mkdtemp()
+            package_dir = Path(temp_dir) / "titan_model"
+            package_dir.mkdir()
+
+            source_dir = Path(os.path.dirname(weights_path))
+
+            # Copy all files
+            for file in source_dir.iterdir():
+                if file.is_file():
+                    shutil.copy2(file, package_dir / file.name)
+
+            # Create proper __init__.py
+            init_content = "\nfrom .modeling_titan import Titan\nfrom .configuration_titan import TitanConfig"
+            (package_dir / "__init__.py").write_text(init_content)
+
+            # Add to sys.path
+            sys.path.insert(0, temp_dir)
+
+            try:
+                # Import the package
+                import titan_model
+
+                # Load config and model
+                config = titan_model.TitanConfig.from_json_file(package_dir / "config.json")
+
+                # Load model with weights
+                model = titan_model.Titan(config)
+
+                # Load weights if they exist
+                weights_file = package_dir / "model.safetensors"
+                if weights_file.exists():
+                    from safetensors.torch import load_file
+                    state_dict = load_file(weights_file)
+                    model.load_state_dict(state_dict)
+
+            finally:
+                # Clean up
+                sys.path.remove(temp_dir)
+                shutil.rmtree(temp_dir)
+
+        else:
+            try:
+                model = AutoModel.from_pretrained('MahmoodLab/TITAN', trust_remote_code=True)
+            except:
+                traceback.print_exc()
+                raise Exception("Failed to download Feather model, make sure that you were granted access and that you correctly registered your token")
+
         precision = torch.float16
         embedding_dim = 768
         return model, precision, embedding_dim
 
     def forward(self, batch, device='cuda'):
-        z = self.model.encode_slide_from_patch_features(batch['features'].to(device), batch['coords'].to(device), batch['attributes']['patch_size_level0'])        
+        z = self.model.encode_slide_from_patch_features(batch['features'].to(device), batch['coords'].to(device), batch['attributes']['patch_size_level0'])
         return z
-    
+
 class FeatherSlideEncoder(BaseSlideEncoder):
 
     def __init__(self, **build_kwargs):
         """
         Feather initialization.
         """
-        super().__init__(**build_kwargs)    
+        super().__init__(**build_kwargs)
 
     def _build(self, pretrained=True):
         self.enc_name = 'feather'
-        
+
         weights_path = self._get_weights_path()
 
         assert pretrained, "FeatherSlideEncoder has no non-pretrained models. Please load with pretrained=True."
-        from transformers import AutoModel 
+        from transformers import AutoModel
         from huggingface_hub import snapshot_download
 
         if weights_path:
@@ -471,12 +531,12 @@ class FeatherSlideEncoder(BaseSlideEncoder):
             except:
                 traceback.print_exc()
                 raise Exception("Failed to download Feather model, make sure that you were granted access and that you correctly registered your token")
-        
+
         precision = torch.float32
         embedding_dim = 512
 
         return model, precision, embedding_dim
-    
+
     def forward(self, batch, device='cuda'):
         z, _ = self.model.forward_features(batch['features'].to(device))
         return z
@@ -492,7 +552,7 @@ class MeanSlideEncoder(BaseSlideEncoder):
 
     def _build(self, model_name = 'mean-default'):
         self.enc_name = model_name
-        
+
         if model_name == 'mean-conch_v1':
             embedding_dim = 512
         elif model_name == 'mean-conch_v15':
@@ -536,7 +596,7 @@ class MeanSlideEncoder(BaseSlideEncoder):
         else:
             print(f"\033[93mWARNING: Could not automatically infer embedding_dim for mean encoder {self.enc_name}. Setting to None.\033[0m")
             embedding_dim = None
-            
+
         return None, None, embedding_dim
 
     def forward(self, batch, device='cuda'):
