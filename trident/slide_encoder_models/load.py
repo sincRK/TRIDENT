@@ -220,9 +220,6 @@ class PRISMSlideEncoder(BaseSlideEncoder):
 
         weights_path = self._get_weights_path()
 
-        if sys.version_info < (3, 10): 
-            raise Exception("PRISM requires Python 3.10 or above.")
-
         try:
             import environs  # weird dependencies required by PRISM
             import sacremoses
