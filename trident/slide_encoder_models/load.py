@@ -150,7 +150,7 @@ class ABMILSlideEncoder(BaseSlideEncoder):
         head_dim: int,
         dropout: float,
         gated: bool,
-        pretrained: bool = False
+        pretrained: bool = False,
     ) -> Tuple[torch.nn.ModuleDict, torch.dtype, int]:
 
         from trident.slide_encoder_models.model_zoo.reusable_blocks.ABMIL import ABMIL
@@ -158,7 +158,7 @@ class ABMILSlideEncoder(BaseSlideEncoder):
 
         self.enc_name = 'abmil'
 
-        assert pretrained is False, "ABMILSlideEncoder has no corresponding pretrained models. Please load with pretrained=False."
+        weights_path = self._get_weights_path()
 
         pre_attention_layers = nn.Sequential(
             nn.Linear(input_feature_dim, input_feature_dim),
@@ -186,6 +186,11 @@ class ABMILSlideEncoder(BaseSlideEncoder):
             'image_pooler': image_pooler,
             'post_attention_layers': post_attention_layers
         })
+
+        if pretrained:
+            assert weights_path, "No weights path found for ABMIL."
+            state_dict = torch.load(weights_path, map_location='cpu')
+            model.load_state_dict(state_dict, strict=False)
 
         precision = torch.float32
         embedding_dim = input_feature_dim
@@ -255,7 +260,7 @@ class CHIEFSlideEncoder(BaseSlideEncoder):
     def _build(self, pretrained=True):
 
         self.enc_name = 'chief'
-        weights_path = get_weights_path('slide', self.enc_name)
+        weights_path = self._get_weights_path()
 
         # Ensure model can be built.
         try:
@@ -435,7 +440,7 @@ class TitanSlideEncoder(BaseSlideEncoder):
         assert pretrained, "TitanSlideEncoder has no non-pretrained models. Please load with pretrained=True."
         from transformers import AutoModel
 
-        if weights_path:
+        if pretrained and weights_path:
             # Transformers bug with relative imports from the mahmoodlab/TITAN repo,
             # similar to https://github.com/huggingface/transformers/issues/29251
             # Also the conch_tokenizer.py trys to access the huggingface repo which
@@ -517,7 +522,7 @@ class FeatherSlideEncoder(BaseSlideEncoder):
         from transformers import AutoModel
         from huggingface_hub import snapshot_download
 
-        if weights_path:
+        if pretrained and weights_path:
             weights_path = os.path.dirname(weights_path)  # Use directory containing the weights
             model = AutoModel.from_pretrained(weights_path, trust_remote_code=True, local_files_only=True)
         else:
