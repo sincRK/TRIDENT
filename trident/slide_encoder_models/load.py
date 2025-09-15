@@ -218,24 +218,74 @@ class PRISMSlideEncoder(BaseSlideEncoder):
 
         self.enc_name = 'prism'
 
-        if sys.version_info < (3, 10):
-            raise RuntimeError("PRISM requires Python 3.10 or above. Please update your Python interpreter.")
+        weights_path = self._get_weights_path()
+
+        if sys.version_info < (3, 10): 
+            raise Exception("PRISM requires Python 3.10 or above.")
 
         try:
             import environs  # weird dependencies required by PRISM
             import sacremoses
             from transformers import AutoModel, AutoConfig
-        except:
+        except ImportError:
             traceback.print_exc()
-            raise Exception(
+            raise ImportError(
                 "Please run `pip install environs==11.0.0 transformers==4.42.4 sacremoses==0.1.1` "
                 "and ensure Python version is 3.10 or above."
             )
 
         if pretrained:
-            model = AutoModel.from_pretrained('paige-ai/Prism', trust_remote_code=True)
+            if weights_path:
+                import tempfile
+                import shutil
+                from pathlib import Path
+
+                # Create a proper Python package in a temporary location
+                temp_dir = tempfile.mkdtemp()
+                package_dir = Path(temp_dir) / "prism_model"
+                package_dir.mkdir()
+
+                source_dir = Path(os.path.dirname(weights_path))
+
+                # Copy all files
+                for file in source_dir.iterdir():
+                    if file.is_file():
+                        shutil.copy2(file, package_dir / file.name)
+
+                # Create proper __init__.py
+                init_content = "\nfrom .modeling_prism import Prism\nfrom .configuring_prism import PrismConfig"
+                (package_dir / "__init__.py").write_text(init_content)
+
+                # Add to sys.path
+                sys.path.insert(0, temp_dir)
+
+                try:
+                    # Import the package
+                    import prism_model
+
+                    # Load config and model
+                    config = prism_model.PrismConfig.from_json_file(package_dir / "config.json")
+
+                    # Load model with weights
+                    model = prism_model.Prism(config)
+
+                    # Load weights if they exist
+                    weights_file = package_dir / "model.safetensors"
+                    if weights_file.exists():
+                        from safetensors.torch import load_file
+                        state_dict = load_file(weights_file)
+                        model.load_state_dict(state_dict, strict=False)
+
+                finally:
+                    # Clean up
+                    sys.path.remove(temp_dir)
+                    shutil.rmtree(temp_dir)
+
+            else:
+                model = AutoModel.from_pretrained('paige-ai/Prism', trust_remote_code=True)
         else:
             model = AutoModel.from_config(AutoConfig.from_pretrained('paige-ai/Prism'))
+
         model.text_decoder = None
         precision = torch.float16
         embedding_dim = 1280
