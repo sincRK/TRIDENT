@@ -16,6 +16,7 @@ dependencies:
   - openslide-python
   - pillow
   - timm=0.9.16
+  - environs==11.0.0
   - geopandas
   - huggingface_hub
   - scipy
@@ -23,3 +24,4 @@ dependencies:
   - pip:
       - einops_exts
       - pyisyntax
+      - sacremoses==0.1.1
