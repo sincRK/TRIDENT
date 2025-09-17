@@ -40,7 +40,7 @@ slide_to_patch_encoder_name = {
     'threads': 'conch_v15',
     'titan': 'conch_v15',
     'tcga': 'conch_v15',
-    'prism': 'virchow',
+    'prism': 'virchow2', # this should be virchow instead of virchow2, but hacked for now since same embedding dim
     'chief': 'ctranspath',
     'gigapath': 'gigapath',
     'madeleine': 'conch_v1',
