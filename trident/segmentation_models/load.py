@@ -556,7 +556,6 @@ class LeNet5Segmenter(SegmentationModel):
         binary_mask = (tissue_ratio > 0.6).float()
 
         return binary_mask
-        return binary_mask
 
 
 def segmentation_model_factory(
