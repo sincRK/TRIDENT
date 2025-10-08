@@ -1,5 +1,5 @@
 import torch
-import numpy as np 
+import numpy as np
 from PIL import Image
 import unittest
 
@@ -9,7 +9,7 @@ except:
     pass
 
 import sys; sys.path.append('../')
-from trident.segmentation_models import segmentation_model_factory 
+from trident.segmentation_models import segmentation_model_factory
 
 """
 Test forward pass of the segmentation model(s).
@@ -38,9 +38,12 @@ class TestSegmentationModels(unittest.TestCase):
 
     def test_hest(self):
         self._test_forward('hest')
-        
+
     def test_grandqc(self):
         self._test_forward('grandqc')
+
+    def test_lenet5(self):
+        self._test_forward('lenet5')
 
 if __name__ == '__main__':
     unittest.main()
