@@ -1,8 +1,9 @@
 import traceback
 from abc import abstractmethod
 from typing import Literal, Optional
+from functools import partial
 import torch
-import os 
+import os
 
 from trident.patch_encoder_models.utils.constants import get_constants
 from trident.patch_encoder_models.utils.transform_utils import get_eval_transforms
@@ -67,15 +68,15 @@ def encoder_factory(model_name: str, **kwargs):
 class BasePatchEncoder(torch.nn.Module):
 
     _has_internet = has_internet_connection()
-    
+
     def __init__(self, weights_path: Optional[str] = None, **build_kwargs):
         """
         Initialize BasePatchEncoder.
 
         Args:
-            weights_path (Optional[str]): 
+            weights_path (Optional[str]):
                 Optional path to local model weights. If None, the model is loaded from the model registry or downloaded from Hugging Face Hub.
-            **build_kwargs: 
+            **build_kwargs:
                 Additional keyword arguments passed to the `_build()` method to customize model creation.
 
         Attributes:
@@ -94,7 +95,7 @@ class BasePatchEncoder(torch.nn.Module):
     def ensure_valid_weights_path(self, weights_path):
         if weights_path and not os.path.isfile(weights_path):
             raise FileNotFoundError(f"Expected checkpoint at '{weights_path}', but the file was not found.")
-    
+
     def ensure_has_internet(self, enc_name):
         if not BasePatchEncoder._has_internet:
             raise FileNotFoundError(
@@ -102,11 +103,11 @@ class BasePatchEncoder(torch.nn.Module):
                 f"To proceed, please manually download: {enc_name},\n"
                 f"and place it in the model registry in:\n`trident/patch_encoder_models/local_ckpts.json`"
             )
-        
+
     def _get_weights_path(self):
         """
-        If self.weights_path is provided, use it. 
-        If not provided, check the model registry. 
+        If self.weights_path is provided, use it.
+        If not provided, check the model registry.
             If path in model registry is empty, auto-download from huggingface
             else, use the path from the registry.
         """
@@ -124,7 +125,7 @@ class BasePatchEncoder(torch.nn.Module):
         """
         z = self.model(x)
         return z
-        
+
     @abstractmethod
     def _build(self, **build_kwargs):
         pass
@@ -136,17 +137,17 @@ class CustomInferenceEncoder(BasePatchEncoder):
         """
         Initialize a CustomInferenceEncoder from user-defined components.
 
-        This class is used when the model, transforms, and precision are pre-instantiated externally 
+        This class is used when the model, transforms, and precision are pre-instantiated externally
         and should be injected directly into the encoder wrapper.
 
         Args:
-            enc_name (str): 
+            enc_name (str):
                 A unique name or identifier for the encoder (used for registry or logging).
-            model (torch.nn.Module): 
+            model (torch.nn.Module):
                 A PyTorch model instance to use for inference.
-            transforms (Callable): 
+            transforms (Callable):
                 A callable (e.g., torchvision or timm transform) to preprocess input images for evaluation.
-            precision (torch.dtype): 
+            precision (torch.dtype):
                 The precision to use for inference (e.g., torch.float32, torch.float16).
         """
         super().__init__()
@@ -154,13 +155,13 @@ class CustomInferenceEncoder(BasePatchEncoder):
         self.model = model
         self.eval_transforms = transforms
         self.precision = precision
-        
+
     def _build(self):
         return None, None, None
 
 
 class MuskInferenceEncoder(BasePatchEncoder):
-    
+
     def __init__(self, **build_kwargs):
         """
         MUSK initialization.
@@ -173,13 +174,13 @@ class MuskInferenceEncoder(BasePatchEncoder):
             inference_aug (bool): Whether to use test-time multiscale augmentation. Default is False to allow for fair comparison with other models.
         """
         import timm
-        
+
         self.enc_name = 'musk'
         self.inference_aug = inference_aug
         self.with_proj = with_proj
         self.out_norm = out_norm
         self.return_global = return_global
-    
+
         try:
             from musk import utils, modeling
         except:
@@ -198,21 +199,21 @@ class MuskInferenceEncoder(BasePatchEncoder):
             except:
                 traceback.print_exc()
                 raise Exception("Failed to download MUSK model, make sure that you were granted access and that you correctly registered your token")
-        
+
         from timm.data.constants import IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
         from torchvision.transforms import InterpolationMode
         eval_transform = get_eval_transforms(IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD, target_img_size = 384, center_crop = True, interpolation=InterpolationMode.BICUBIC, antialias=True)
         precision = torch.float16
-        
+
         return model, eval_transform, precision
-    
+
     def forward(self, x):
         return self.model(
                 image=x,
                 with_head=self.with_proj,
                 out_norm=self.out_norm,
                 ms_aug=self.inference_aug,
-                return_global=self.return_global  
+                return_global=self.return_global
                 )[0]  # Forward pass yields (vision_cls, text_cls). We only need vision_cls.
 
 
@@ -234,7 +235,7 @@ class Conchv1InferenceEncoder(BasePatchEncoder):
         except:
             traceback.print_exc()
             raise Exception("Please install CONCH `pip install git+https://github.com/Mahmoodlab/CONCH.git`")
-        
+
         weights_path = self._get_weights_path()
 
         if weights_path:
@@ -253,14 +254,14 @@ class Conchv1InferenceEncoder(BasePatchEncoder):
             except:
                 traceback.print_exc()
                 raise Exception("Failed to download CONCH v1 model, make sure that you were granted access and that you correctly registered your token")
-    
+
         precision = torch.float32
-        
+
         return model, eval_transform, precision
-    
+
     def forward(self, x):
         return self.model.encode_image(x, proj_contrast=self.with_proj, normalize=self.normalize)
-    
+
 
 class CTransPathInferenceEncoder(BasePatchEncoder):
 
@@ -279,7 +280,7 @@ class CTransPathInferenceEncoder(BasePatchEncoder):
         except:
             traceback.print_exc()
             raise Exception("Failed to import CTransPath model, make sure timm_ctp is installed. `pip install timm_ctp`")
-        
+
         self.enc_name = 'ctranspath'
         weights_path = self._get_weights_path()
 
@@ -289,7 +290,7 @@ class CTransPathInferenceEncoder(BasePatchEncoder):
         if not weights_path:
             self.ensure_has_internet(self.enc_name)
             try:
-                from huggingface_hub import hf_hub_download   
+                from huggingface_hub import hf_hub_download
                 weights_path = hf_hub_download(
                     repo_id="MahmoodLab/hest-bench",
                     repo_type="dataset",
@@ -317,7 +318,7 @@ class CTransPathInferenceEncoder(BasePatchEncoder):
         eval_transform = get_eval_transforms(mean, std, target_img_size=224, interpolation=InterpolationMode.BILINEAR, max_size=None, antialias=True)
 
         precision = torch.float32
-        
+
         return model, eval_transform, precision
 
 
@@ -358,16 +359,16 @@ class PhikonInferenceEncoder(BasePatchEncoder):
         eval_transform = get_eval_transforms(mean, std, target_img_size=224, interpolation=InterpolationMode.BILINEAR, max_size=None, antialias=True)
         precision = torch.float32
         return model, eval_transform, precision
-    
+
     def forward(self, x):
         out = self.forward_features(x)
         out = out.last_hidden_state[:, 0, :]
         return out
-    
+
     def forward_features(self, x):
         out = self.model(pixel_values=x)
         return out
-    
+
 
 class HibouLInferenceEncoder(BasePatchEncoder):
 
@@ -393,18 +394,18 @@ class HibouLInferenceEncoder(BasePatchEncoder):
             except:
                 traceback.print_exc()
                 raise Exception("Failed to download Hibou-L model, make sure that you were granted access and that you correctly registered your token")
-        
+
         mean, std = get_constants('hibou')
         eval_transform = get_eval_transforms(mean, std, target_img_size=224, interpolation=InterpolationMode.BICUBIC, max_size=None, antialias=True)
         precision = torch.float32
 
         return model, eval_transform, precision
-    
+
     def forward(self, x):
         out = self.forward_features(x)
         out = out.pooler_output
         return out
-    
+
     def forward_features(self, x):
         out = self.model(pixel_values=x)
         return out
@@ -476,7 +477,7 @@ class KaikoS16InferenceEncoder(KaikoInferenceEncoder):
         Kaiko Small 16 initialization.
         """
         super().__init__(**build_kwargs)
-    
+
 
 class KaikoS8InferenceEncoder(KaikoInferenceEncoder):
     MODEL_NAME = "vits8"
@@ -488,7 +489,7 @@ class KaikoS8InferenceEncoder(KaikoInferenceEncoder):
         Kaiko Small 8 initialization.
         """
         super().__init__(**build_kwargs)
-    
+
 
 class KaikoB16InferenceEncoder(KaikoInferenceEncoder):
     MODEL_NAME = "vitb16"
@@ -500,7 +501,7 @@ class KaikoB16InferenceEncoder(KaikoInferenceEncoder):
         Kaiko Base 16 initialization.
         """
         super().__init__(**build_kwargs)
-    
+
 
 class KaikoB8InferenceEncoder(KaikoInferenceEncoder):
     MODEL_NAME = "vitb8"
@@ -512,7 +513,7 @@ class KaikoB8InferenceEncoder(KaikoInferenceEncoder):
         Kaiko Base 8 initialization.
         """
         super().__init__(**build_kwargs)
-    
+
 
 class KaikoL14InferenceEncoder(KaikoInferenceEncoder):
     MODEL_NAME = "vitl14"
@@ -524,7 +525,7 @@ class KaikoL14InferenceEncoder(KaikoInferenceEncoder):
         Kaiko Large 14 initialization.
         """
         super().__init__(**build_kwargs)
-    
+
 
 class ResNet50InferenceEncoder(BasePatchEncoder):
 
@@ -535,8 +536,8 @@ class ResNet50InferenceEncoder(BasePatchEncoder):
         super().__init__(**build_kwargs)
 
     def _build(
-        self, 
-        pretrained=True, 
+        self,
+        pretrained=True,
         timm_kwargs={"features_only": True, "out_indices": [3], "num_classes": 0},
         img_size=224,
         pool=True
@@ -573,15 +574,15 @@ class ResNet50InferenceEncoder(BasePatchEncoder):
             self.pool = torch.nn.AdaptiveAvgPool2d(1)
         else:
             self.pool = None
-        
+
         return model, eval_transform, precision
-    
+
     def forward(self, x):
         out = self.forward_features(x)
         if self.pool:
             out = self.pool(out).squeeze(-1).squeeze(-1)
         return out
-    
+
     def forward_features(self, x):
         out = self.model(x)
         if isinstance(out, list):
@@ -629,7 +630,7 @@ class LunitS8InferenceEncoder(BasePatchEncoder):
         precision = torch.float32
 
         return model, eval_transform, precision
-    
+
 
 class UNIInferenceEncoder(BasePatchEncoder):
 
@@ -640,7 +641,7 @@ class UNIInferenceEncoder(BasePatchEncoder):
         super().__init__(**build_kwargs)
 
     def _build(
-        self, 
+        self,
         timm_kwargs={"dynamic_img_size": True, "num_classes": 0, "init_values": 1e-5}
     ):
         import timm
@@ -683,7 +684,7 @@ class UNIInferenceEncoder(BasePatchEncoder):
 
         precision = torch.float16
         return model, eval_transform, precision
-    
+
 
 class UNIv2InferenceEncoder(BasePatchEncoder):
 
@@ -743,7 +744,7 @@ class UNIv2InferenceEncoder(BasePatchEncoder):
 
         precision = torch.bfloat16
         return model, eval_transform, precision
-    
+
 
 class GigaPathInferenceEncoder(BasePatchEncoder):
 
@@ -754,7 +755,7 @@ class GigaPathInferenceEncoder(BasePatchEncoder):
         super().__init__(**build_kwargs)
 
     def _build(
-        self, 
+        self,
     ):
         import timm
         assert timm.__version__ == '0.9.16', f"Gigapath requires timm version 0.9.16, but found {timm.__version__}. Please install the correct version using `pip install timm==0.9.16`"
@@ -803,10 +804,10 @@ class GigaPathInferenceEncoder(BasePatchEncoder):
         precision = torch.float32
         return model, eval_transform, precision
 
-    
+
 class VirchowInferenceEncoder(BasePatchEncoder):
     import timm
-    
+
     def __init__(self, **build_kwargs):
         """
         Virchow initialization.
@@ -862,7 +863,7 @@ class VirchowInferenceEncoder(BasePatchEncoder):
         )
         precision = torch.float16
         self.return_cls = return_cls
-        
+
         return model, eval_transform, precision
 
     def forward(self, x):
@@ -879,7 +880,7 @@ class VirchowInferenceEncoder(BasePatchEncoder):
 
 class Virchow2InferenceEncoder(BasePatchEncoder):
     import timm
-    
+
     def __init__(self, **build_kwargs):
         """
         Virchow 2 initialization.
@@ -926,7 +927,7 @@ class Virchow2InferenceEncoder(BasePatchEncoder):
             except:
                 traceback.print_exc()
                 raise Exception("Failed to download Virchow-2 model, make sure that you were granted access and that you correctly registered your token")
-        
+
         eval_transform = transforms.Compose(
             [
                 transforms.Resize(224, interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
@@ -936,16 +937,16 @@ class Virchow2InferenceEncoder(BasePatchEncoder):
         )
         precision = torch.float16
         self.return_cls = return_cls
-        
+
         return model, eval_transform, precision
 
     def forward(self, x):
         output = self.model(x)
-    
+
         class_token = output[:, 0]
         if self.return_cls:
             return class_token
-        
+
         patch_tokens = output[:, 5:]
         embedding = torch.cat([class_token, patch_tokens.mean(1)], dim=-1)
         return embedding
@@ -996,14 +997,14 @@ class HOptimus0InferenceEncoder(BasePatchEncoder):
                 raise Exception("Failed to download HOptimus-0 model, make sure that you were granted access and that you correctly registered your token")
 
         eval_transform = transforms.Compose([
-            transforms.Resize(224),  
+            transforms.Resize(224),
             transforms.ToTensor(),
             transforms.Normalize(
-                mean=(0.707223, 0.578729, 0.703617), 
+                mean=(0.707223, 0.578729, 0.703617),
                 std=(0.211883, 0.230117, 0.177517)
             ),
         ])
-        
+
         precision = torch.float16
         return model, eval_transform, precision
 
@@ -1054,14 +1055,14 @@ class HOptimus1InferenceEncoder(BasePatchEncoder):
                 raise Exception("Failed to download HOptimus-1 model, make sure that you were granted access and that you correctly registered your token")
 
         eval_transform = transforms.Compose([
-            transforms.Resize(224),  
+            transforms.Resize(224),
             transforms.ToTensor(),
             transforms.Normalize(
-                mean=(0.707223, 0.578729, 0.703617), 
+                mean=(0.707223, 0.578729, 0.703617),
                 std=(0.211883, 0.230117, 0.177517)
             ),
         ])
-        
+
         precision = torch.float16
         return model, eval_transform, precision
 
@@ -1101,15 +1102,15 @@ class Phikonv2InferenceEncoder(BasePatchEncoder):
                 raise Exception("Failed to download Phikon v2 model, make sure that you were granted access and that you correctly registered your token")
 
         eval_transform = T.Compose([
-            T.Resize(224),  
-            T.CenterCrop(224),  
+            T.Resize(224),
+            T.CenterCrop(224),
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)  # Normalize with specified mean and std
         ])
 
         precision = torch.float32
         return model, eval_transform, precision
-    
+
     def forward(self, x):
         out = self.model(x)
         out = out.last_hidden_state[:, 0, :]
@@ -1210,8 +1211,8 @@ class Midnight12kInferenceEncoder(BasePatchEncoder):
             raise ValueError(
                 f"expected return_type to be one of 'cls_token' or 'cls+mean', but got '{self.return_type}'"
             )
-      
-            
+
+
 class DINOv3InferenceEncoder(BasePatchEncoder):
 
     def __init__(self, **build_kwargs):
@@ -1238,7 +1239,7 @@ class DINOv3InferenceEncoder(BasePatchEncoder):
                     f"Failed to create DINOv3 ViT-L/16-lvd1689m model from local checkpoint at '{weights_path}'. "
                     "You can download the required `model.safetensors` and `config.json` from: https://huggingface.co/facebook/dinov3-vitl16-pretrain-lvd1689m."
                 )
-        else:   
+        else:
             self.ensure_has_internet(self.enc_name)
 
             try:
@@ -1250,7 +1251,7 @@ class DINOv3InferenceEncoder(BasePatchEncoder):
 
         eval_transform = transforms.Compose(
             [   transforms.ToTensor(),
-                transforms.Resize(224, antialias=True),                
+                transforms.Resize(224, antialias=True),
                 transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ])
 
@@ -1263,7 +1264,111 @@ class DINOv3InferenceEncoder(BasePatchEncoder):
         out = self.model(x)
         out = out.last_hidden_state[:, 0, :] # CLS token
         return out
-    
+
+
+class PanDermInferenceEncoder(BasePatchEncoder):
+    MODEL_NAME = None  # set in subclasses
+    EMBED_DIM = None  # set in subclasses
+    DEPTH = None  # set in subclasses
+    NUM_HEADS = None  # set in subclasses
+
+    def __init__(self, **build_kwargs):
+        """
+        PanDerm initialization.
+        """
+        super().__init__(**build_kwargs)
+
+    def _build(self):
+        from .model_zoo.panderm.vision_transformer import VisionTransformer
+        from torchvision.transforms import InterpolationMode
+
+        self.enc_name = f"panderm-{self.MODEL_NAME}"
+        weights_path = self._get_weights_path()
+
+        # Create model with PanDerm-specific parameters
+        model = VisionTransformer(
+            patch_size=16,
+            embed_dim=self.EMBED_DIM,
+            depth=self.DEPTH,
+            num_heads=self.NUM_HEADS,
+            mlp_ratio=4,
+            qkv_bias=True,
+            norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
+            num_classes=0,  # For feature extraction
+            lin_probe=False  # Disable linear probe mode for inference
+        )
+
+        if weights_path:
+            try:
+                # Load state dict and handle key remapping if needed
+                state_dict = torch.load(weights_path, map_location='cpu', weights_only=True)
+                if 'encoder.' in list(state_dict.keys())[0]:
+                    state_dict = {k.replace("encoder.", ""): v for k, v in state_dict.items()}
+                model.load_state_dict(state_dict, strict=False)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                raise Exception(
+                    f"Failed to create PanDerm model from local checkpoint at '{weights_path}'. "
+                    f"Error: {e}. You can download the required weights from: "
+                    "https://github.com/SiyuanYan1/PanDerm"
+                )
+        else:
+            self.ensure_has_internet(self.enc_name)
+            raise Exception(
+                f"No weights provided for {self.enc_name}. "
+                "Please download weights from https://github.com/SiyuanYan1/PanDerm "
+                "and specify the weights_path parameter."
+            )
+
+        from torchvision import transforms
+
+        mean, std = get_constants("panderm")
+        # Follow original PanDerm preprocessing: Resize(256) -> CenterCrop(224)
+        # This gives crop_pct of 224/256 = 0.875 (not 0.9 as in config)
+        eval_transform = transforms.Compose([
+            transforms.Resize(
+                256,
+                interpolation=InterpolationMode.BICUBIC,
+                antialias=True
+            ),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std)
+        ])
+        precision = torch.float32
+
+        return model, eval_transform, precision
+
+    def forward(self, x):
+        return self.model.forward_features(x, is_train=False)
+
+
+class PanDermLLInferenceEncoder(PanDermInferenceEncoder):
+    MODEL_NAME = "ll"
+    EMBED_DIM = 1024
+    DEPTH = 24
+    NUM_HEADS = 16
+
+    def __init__(self, **build_kwargs):
+        """
+        PanDerm Large (LL) initialization.
+        """
+        super().__init__(**build_kwargs)
+
+
+class PanDermBBInferenceEncoder(PanDermInferenceEncoder):
+    MODEL_NAME = "bb"
+    EMBED_DIM = 768
+    DEPTH = 12
+    NUM_HEADS = 12
+
+    def __init__(self, **build_kwargs):
+        """
+        PanDerm Base (BB) initialization.
+        """
+        super().__init__(**build_kwargs)
+
 
 encoder_registry = {
     "conch_v1": Conchv1InferenceEncoder,
@@ -1289,4 +1394,6 @@ encoder_registry = {
     "kaiko-vitl14": KaikoL14InferenceEncoder,
     "lunit-vits8": LunitS8InferenceEncoder,
     "midnight12k": Midnight12kInferenceEncoder,
+    "panderm-ll": PanDermLLInferenceEncoder,
+    "panderm-bb": PanDermBBInferenceEncoder,
 }

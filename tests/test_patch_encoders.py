@@ -1,5 +1,5 @@
 import torch
-import numpy as np 
+import numpy as np
 from PIL import Image
 import unittest
 try:
@@ -8,7 +8,7 @@ except:
     pass
 
 import sys; sys.path.append('../')
-from trident.patch_encoder_models import * 
+from trident.patch_encoder_models import *
 
 """
 Test forward pass of patch encoders
@@ -42,16 +42,16 @@ class TestPatchEncoders(unittest.TestCase):
         self._test_encoder_forward('conch_v1', with_proj = False, normalize = True)
         self._test_encoder_forward('conch_v1', with_proj = True, normalize = False)
         self._test_encoder_forward('conch_v1', with_proj = False, normalize = False)
-        
+
     def test_conch_v15_forward(self):
         self._test_encoder_forward('conch_v15')
-        
+
     def test_dino_v3_forward(self):
         self._test_encoder_forward('dino_v3')
 
     def test_uni_v1_forward(self):
         self._test_encoder_forward('uni_v1')
-        
+
     def test_uni_v2_forward(self):
         self._test_encoder_forward('uni_v2')
 
@@ -60,7 +60,7 @@ class TestPatchEncoders(unittest.TestCase):
 
     def test_phikon_forward(self):
         self._test_encoder_forward('phikon')
-    
+
     def test_phikon_v2_forward(self):
         self._test_encoder_forward('phikon_v2')
 
@@ -84,23 +84,29 @@ class TestPatchEncoders(unittest.TestCase):
 
     def test_musk_forward(self):
         self._test_encoder_forward('musk')
-    
+
     def test_hibou_l_forward(self):
         self._test_encoder_forward('hibou_l')
-    
+
     def test_kaiko_forward(self):
         self._test_encoder_forward('kaiko-vits8')
         self._test_encoder_forward('kaiko-vits16')
         self._test_encoder_forward('kaiko-vitb8')
         self._test_encoder_forward('kaiko-vitb16')
         self._test_encoder_forward('kaiko-vitl14')
-        
+
     def test_lunitvits8_forward(self):
         self._test_encoder_forward('lunit-vits8')
-    
+
     def test_midnight12k_forward(self):
         self._test_encoder_forward('midnight12k')
         self._test_encoder_forward('midnight12k', return_type="cls+mean")
+
+    def test_panderm_forward(self):
+        # Test PanDerm Large (LL) model
+        self._test_encoder_forward('panderm-ll')
+        # Test PanDerm Base (BB) model
+        self._test_encoder_forward('panderm-bb')
 
 if __name__ == '__main__':
     unittest.main()

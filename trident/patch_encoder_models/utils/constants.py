@@ -6,6 +6,8 @@ HIBOU_MEAN = [0.7068, 0.5755, 0.722]
 HIBOU_STD = [0.195, 0.2316, 0.1816]
 KAIKO_MEAN = [0.5, 0.5, 0.5]
 KAIKO_STD = [0.5, 0.5, 0.5]
+PANDERM_MEAN = [0.5, 0.5, 0.5]
+PANDERM_STD = [0.5, 0.5, 0.5]
 NONE_MEAN = None
 NONE_STD = None
 
@@ -20,5 +22,7 @@ def get_constants(norm='imagenet'):
         return NONE_MEAN, NONE_STD
     elif norm == 'kaiko':
         return KAIKO_MEAN, KAIKO_STD
+    elif norm == 'panderm':
+        return PANDERM_MEAN, PANDERM_STD
     else:
         raise ValueError(f"Invalid norm: {norm}")
