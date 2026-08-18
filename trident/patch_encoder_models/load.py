@@ -44,6 +44,7 @@ def encoder_factory(model_name: str, **kwargs):
             - "kaiko-vits16"
             - "kaiko-vitl14"
             - "lunit-vits8"
+            - "conceptclip"
 
         **kwargs: Optional keyword arguments passed directly to the encoder constructor. These
             may include parameters such as:
@@ -1263,7 +1264,53 @@ class DINOv3InferenceEncoder(BasePatchEncoder):
         out = self.model(x)
         out = out.last_hidden_state[:, 0, :] # CLS token
         return out
-    
+
+
+class ConceptCLIPInferenceEncoder(BasePatchEncoder):
+
+    def __init__(self, **build_kwargs):
+        """
+        ConceptCLIP initialization.
+        """
+        super().__init__(**build_kwargs)
+
+    def _build(self):
+        from trident.patch_encoder_models.model_zoo.conceptclip.conceptclip import (
+            get_eval_transform,
+            load_model_from_pretrained,
+        )
+
+        self.enc_name = 'conceptclip'
+        weights_path = self._get_weights_path()
+
+        if weights_path:
+            try:
+                model = load_model_from_pretrained(weights_path=weights_path)
+            except:
+                traceback.print_exc()
+                raise Exception(
+                    f"Failed to create ConceptCLIP model from local checkpoint at '{weights_path}'. "
+                    "You can download the model from: https://huggingface.co/JerrryNie/ConceptCLIP."
+                )
+        else:
+            self.ensure_has_internet(self.enc_name)
+            try:
+                model = load_model_from_pretrained()
+            except:
+                traceback.print_exc()
+                raise Exception(
+                    "Failed to download ConceptCLIP model, make sure that you were granted access "
+                    "and that you correctly registered your token"
+                )
+
+        eval_transform = get_eval_transform()
+        precision = torch.float32
+        return model, eval_transform, precision
+
+    def forward(self, x):
+        image_embs, _ = self.model.encode_image(x, normalize=False)
+        return image_embs
+
 
 encoder_registry = {
     "conch_v1": Conchv1InferenceEncoder,
@@ -1289,4 +1336,5 @@ encoder_registry = {
     "kaiko-vitl14": KaikoL14InferenceEncoder,
     "lunit-vits8": LunitS8InferenceEncoder,
     "midnight12k": Midnight12kInferenceEncoder,
+    "conceptclip": ConceptCLIPInferenceEncoder,
 }
