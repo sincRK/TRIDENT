@@ -21,7 +21,11 @@ dependencies:
   - huggingface_hub
   - scipy
   - pip
+  # ConceptCLIP (--patch_encoder conceptclip): weights from JerrryNie/ConceptCLIP (gated; HF token / local_ckpts.json)
   - pip:
       - einops_exts
       - pyisyntax
       - sacremoses==0.1.1
+      - ftfy
+      - regex
+      - safetensors
